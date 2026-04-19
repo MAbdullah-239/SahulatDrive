@@ -1,0 +1,18 @@
+<svg width="50" height="50" viewBox="0 0 50 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+<foreignObject x="-4" y="-4" width="58" height="58"><div xmlns="http://www.w3.org/1999/xhtml" style="backdrop-filter:blur(2px);clip-path:url(#bgblur_0_948_3314_clip_path);height:100%;width:100%"></div></foreignObject><g data-figma-bg-blur-radius="4">
+<rect width="50" height="50" rx="25" fill="url(#paint0_radial_948_3314)" fill-opacity="0.1"/>
+<rect x="0.25" y="0.25" width="49.5" height="49.5" rx="24.75" stroke="white" stroke-opacity="0.2" stroke-width="0.5"/>
+</g>
+<path d="M33.25 20.5H16.75C16.3358 20.5 16 20.8358 16 21.25V24.25C16 24.6642 16.3358 25 16.75 25H33.25C33.6642 25 34 24.6642 34 24.25V21.25C34 20.8358 33.6642 20.5 33.25 20.5Z" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M32.5 25V31.75C32.5 31.9489 32.421 32.1397 32.2803 32.2803C32.1397 32.421 31.9489 32.5 31.75 32.5H18.25C18.0511 32.5 17.8603 32.421 17.7197 32.2803C17.579 32.1397 17.5 31.9489 17.5 31.75V25" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M25 20.5V32.5" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M29.2469 19.4404C28.1781 20.4998 25 20.4998 25 20.4998C25 20.4998 25 17.3217 26.0594 16.2529C26.4821 15.8302 27.0554 15.5928 27.6531 15.5928C28.2509 15.5928 28.8242 15.8302 29.2469 16.2529C29.6696 16.6756 29.907 17.2489 29.907 17.8467C29.907 18.4444 29.6696 19.0177 29.2469 19.4404V19.4404Z" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M20.7539 19.4404C21.8227 20.4998 25.0008 20.4998 25.0008 20.4998C25.0008 20.4998 25.0008 17.3217 23.9414 16.2529C23.5187 15.8302 22.9454 15.5928 22.3477 15.5928C21.7499 15.5928 21.1766 15.8302 20.7539 16.2529C20.3312 16.6756 20.0938 17.2489 20.0938 17.8467C20.0937 18.4444 20.3312 19.0177 20.7539 19.4404V19.4404Z" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+<defs>
+<clipPath id="bgblur_0_948_3314_clip_path" transform="translate(4 4)"><rect width="50" height="50" rx="25"/>
+</clipPath><radialGradient id="paint0_radial_948_3314" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(25 25) scale(25)">
+<stop stop-color="white"/>
+<stop offset="1" stop-color="#999999"/>
+</radialGradient>
+</defs>
+</svg>

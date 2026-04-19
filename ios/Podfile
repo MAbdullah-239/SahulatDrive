@@ -37,5 +37,30 @@ target 'SahulatDrive' do
         end
       end # closes if target.name == "RNScreens"
     end # closes each do
+
+    # Fix fmt consteval issue with Apple Clang 21.x / Xcode 26.x
+    # The fmt library's consteval guard only blocks Apple clang < 14, but consteval
+    # is broken again in Apple Clang 21.x. We patch the header directly because
+    # #define FMT_USE_CONSTEVAL is resolved at the preprocessor stage — compiler
+    # flags like -DFMT_USE_CONSTEVAL=0 arrive too late for the #elif chain.
+    fmt_base_h = installer.sandbox.root + "fmt/include/fmt/base.h"
+    if fmt_base_h.exist?
+      content = fmt_base_h.read
+      # Widen the Apple clang guard to also disable consteval for clang >= 14
+      # (covers Apple Clang 21.x / Xcode 26.x where consteval is broken again)
+      old_guard = '#elif defined(__apple_build_version__) && __apple_build_version__ < 14000029L'
+      new_guard = '#elif defined(__apple_build_version__)'
+      if content.include?(old_guard)
+        content.sub!(old_guard, new_guard)
+        FileUtils.chmod(0644, fmt_base_h.to_s)
+        fmt_base_h.write(content)
+        Pod::UI.puts "[fmt patch] Disabled consteval for all Apple Clang builds (fixes Xcode 26 / clang 21.x)".green
+      else
+        Pod::UI.puts "[fmt patch] Guard not found — already patched or fmt version changed.".yellow
+      end
+    else
+      Pod::UI.puts "[fmt patch] fmt/include/fmt/base.h not found — skipping patch.".yellow
+    end # closes fmt consteval fix
+
   end # closes post_install
 end # closes target
