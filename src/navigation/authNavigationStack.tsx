@@ -3,8 +3,6 @@
 // import {useSelector} from 'react-redux';
 
 // import {AuthScreenStack} from '../constants/stacks/authStack/authStack';
-// import {OnboardingLayoutWrapper} from '../wrappers/onboardingWrapper';
-// import {RootNavigationStackWrapper} from '../wrappers/rootNavigationStackWrapper';
 
 // // 1. Define Param List (all screens = undefined for now)
 // export type AuthStackParamList = {
@@ -54,62 +52,6 @@
 //         name="enterPhoneNumber"
 //         component={RootNavigationStackWrapper(
 //           AuthScreenStack.nestedScreens.enterPhoneNumber.component,
-//         )}
-//       />
-
-//       <AuthStack.Screen
-//         name="verifyOTP"
-//         component={RootNavigationStackWrapper(
-//           AuthScreenStack.nestedScreens.verifyOTP.component,
-//         )}
-//       />
-
-//       <AuthStack.Screen
-//         name="enterPin"
-//         component={RootNavigationStackWrapper(
-//           AuthScreenStack.nestedScreens.enterPin.component,
-//         )}
-//       />
-
-//       <AuthStack.Screen
-//         name="personalInformation"
-//         component={RootNavigationStackWrapper(
-//           AuthScreenStack.nestedScreens.personalInformation.component,
-//         )}
-//       />
-
-//       <AuthStack.Screen
-//         name="uploadIdCard"
-//         component={RootNavigationStackWrapper(
-//           AuthScreenStack.nestedScreens.uploadIdCard.component,
-//         )}
-//       />
-
-//       <AuthStack.Screen
-//         name="addProfilePicture"
-//         component={RootNavigationStackWrapper(
-//           AuthScreenStack.nestedScreens.addProfilePicture.component,
-//         )}
-//       />
-
-//       <AuthStack.Screen
-//         name="reviewingInformation"
-//         component={RootNavigationStackWrapper(
-//           AuthScreenStack.nestedScreens.reviewingInformation.component,
-//         )}
-//       />
-
-//       <AuthStack.Screen
-//         name="enterInformation"
-//         component={RootNavigationStackWrapper(
-//           AuthScreenStack.nestedScreens.enterInformation.component,
-//         )}
-//       />
-
-//       <AuthStack.Screen
-//         name="VerifyPin"
-//         component={RootNavigationStackWrapper(
-//           AuthScreenStack.nestedScreens.VerifyPin.component,
 //         )}
 //       />
 //     </AuthStack.Navigator>

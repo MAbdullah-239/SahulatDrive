@@ -8,8 +8,12 @@ import {
   Platform,
   StatusBar,
 } from 'react-native';
-import {Colors} from '../../../generalStyles/colors';
-import {FontFamily} from '../../../generalStyles/generalFonts';
+import { Colors } from '../../../generalStyles/colors';
+import { FontFamily } from '../../../generalStyles/generalFonts';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { MainStack as MainStackConstants } from '../../../constants/stack/mainStack/mainStack';
+import { MainStackParamList } from '../../../navigation/mainStackNavigation';
 
 import MapView, { Marker } from 'react-native-maps';
 
@@ -18,10 +22,11 @@ interface HomeProps {
 }
 
 const Home: React.FC<HomeProps> = () => {
+  const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
-      
+
       {/* ── Background Map Area ── */}
       <MapView
         style={StyleSheet.absoluteFillObject}
@@ -38,7 +43,7 @@ const Home: React.FC<HomeProps> = () => {
         <Marker coordinate={{ latitude: 31.5204, longitude: 74.3587 }}>
           <View style={styles.mockUserDot} />
         </Marker>
-        
+
         {/* Mock Mechanic Marker */}
         <Marker coordinate={{ latitude: 31.5154, longitude: 74.3527 }}>
           <Text style={{ fontSize: 24 }}>🔧</Text>
@@ -46,7 +51,7 @@ const Home: React.FC<HomeProps> = () => {
       </MapView>
 
       <SafeAreaView style={styles.safeArea} pointerEvents="box-none">
-        
+
         {/* ── Top Section (Header & Location) ── */}
         <View style={styles.topContainer} pointerEvents="box-none">
           {/* Header */}
@@ -80,11 +85,15 @@ const Home: React.FC<HomeProps> = () => {
 
         {/* ── Bottom Dashboard ── */}
         <View style={styles.bottomDashboard} pointerEvents="box-none">
-          
+
           {/* Action Cards */}
           <View style={styles.actionCardsRow}>
             {/* Emergency Card */}
-            <TouchableOpacity style={styles.emergencyCard} activeOpacity={0.8}>
+            <TouchableOpacity 
+              style={styles.emergencyCard} 
+              activeOpacity={0.8}
+              onPress={() => navigation.navigate(MainStackConstants.nestedScreens.RequestHelp.name)}
+            >
               <View style={styles.emergencyIconWrapper}>
                 <Text style={styles.emergencyIcon}>🆘</Text>
               </View>
@@ -95,7 +104,11 @@ const Home: React.FC<HomeProps> = () => {
             {/* Right Column Cards */}
             <View style={styles.rightCardsColumn}>
               {/* Workshop Card */}
-              <TouchableOpacity style={styles.smallCard} activeOpacity={0.8}>
+              <TouchableOpacity 
+                style={styles.smallCard} 
+                activeOpacity={0.8}
+                onPress={() => navigation.navigate(MainStackConstants.nestedScreens.BookWorkshop.name)}
+              >
                 <Text style={styles.cardEmoji}>🏭</Text>
                 <View>
                   <Text style={styles.cardTitle}>Workshops</Text>
@@ -104,7 +117,11 @@ const Home: React.FC<HomeProps> = () => {
               </TouchableOpacity>
 
               {/* AI Diagnosis Card */}
-              <TouchableOpacity style={styles.smallCard} activeOpacity={0.8}>
+              <TouchableOpacity 
+                style={styles.smallCard} 
+                activeOpacity={0.8}
+                onPress={() => navigation.navigate(MainStackConstants.nestedScreens.AiDiagnosis.name)}
+              >
                 <Text style={styles.cardEmoji}>🤖</Text>
                 <View>
                   <Text style={styles.cardTitle}>AI Diagnosis</Text>
@@ -155,7 +172,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#111214', // Background behind the map
   },
-  
+
   /* ── Mock Map Layer ── */
   mapPlaceholder: {
     ...StyleSheet.absoluteFillObject,
@@ -170,7 +187,7 @@ const styles = StyleSheet.create({
   // Fake map icons
   mockUserDot: {
     position: 'absolute', top: '45%', left: '46%', width: 28, height: 28, borderRadius: 14, backgroundColor: '#3B82F6',
-    borderWidth: 5, borderColor: '#1D4ED8', shadowColor: '#3B82F6', shadowOpacity: 0.5, shadowRadius: 10, shadowOffset: {width: 0,height: 0}
+    borderWidth: 5, borderColor: '#1D4ED8', shadowColor: '#3B82F6', shadowOpacity: 0.5, shadowRadius: 10, shadowOffset: { width: 0, height: 0 }
   },
   mockWrench1: { position: 'absolute', top: '35%', left: '25%', fontSize: 24, opacity: 0.8 },
   mockWrench2: { position: 'absolute', top: '55%', left: '65%', fontSize: 24, opacity: 0.8 },
@@ -265,14 +282,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingBottom: Platform.OS === 'ios' ? 0 : 20,
   },
-  
+
   /* Action Cards */
   actionCardsRow: {
     flexDirection: 'row',
     gap: 12,
     marginBottom: 28,
   },
-  
+
   /* Emergency Card */
   emergencyCard: {
     flex: 1,
@@ -284,7 +301,7 @@ const styles = StyleSheet.create({
     shadowColor: '#E8490F',
     shadowOpacity: 0.5,
     shadowRadius: 20,
-    shadowOffset: {width: 0, height: 10},
+    shadowOffset: { width: 0, height: 10 },
     elevation: 8,
   },
   emergencyIconWrapper: {
@@ -386,7 +403,7 @@ const styles = StyleSheet.create({
   navText: {
     fontFamily: FontFamily.UrbanistMedium,
     fontSize: 12,
-    color: Colors.GreyText,
+    color: Colors.BlackText,
   },
   navTextActive: {
     color: '#E8490F',
@@ -397,102 +414,102 @@ const styles = StyleSheet.create({
 const mapDarkStyle = [
   {
     "elementType": "geometry",
-    "stylers": [{"color": "#212121"}]
+    "stylers": [{ "color": "#212121" }]
   },
   {
     "elementType": "labels.icon",
-    "stylers": [{"visibility": "off"}]
+    "stylers": [{ "visibility": "off" }]
   },
   {
     "elementType": "labels.text.fill",
-    "stylers": [{"color": "#757575"}]
+    "stylers": [{ "color": "#757575" }]
   },
   {
     "elementType": "labels.text.stroke",
-    "stylers": [{"color": "#212121"}]
+    "stylers": [{ "color": "#212121" }]
   },
   {
     "featureType": "administrative",
     "elementType": "geometry",
-    "stylers": [{"color": "#757575"}]
+    "stylers": [{ "color": "#757575" }]
   },
   {
     "featureType": "administrative.country",
     "elementType": "labels.text.fill",
-    "stylers": [{"color": "#9e9e9e"}]
+    "stylers": [{ "color": "#9e9e9e" }]
   },
   {
     "featureType": "administrative.land_parcel",
-    "stylers": [{"visibility": "off"}]
+    "stylers": [{ "visibility": "off" }]
   },
   {
     "featureType": "administrative.locality",
     "elementType": "labels.text.fill",
-    "stylers": [{"color": "#bdbdbd"}]
+    "stylers": [{ "color": "#bdbdbd" }]
   },
   {
     "featureType": "poi",
     "elementType": "labels.text.fill",
-    "stylers": [{"color": "#757575"}]
+    "stylers": [{ "color": "#757575" }]
   },
   {
     "featureType": "poi.park",
     "elementType": "geometry",
-    "stylers": [{"color": "#181818"}]
+    "stylers": [{ "color": "#181818" }]
   },
   {
     "featureType": "poi.park",
     "elementType": "labels.text.fill",
-    "stylers": [{"color": "#616161"}]
+    "stylers": [{ "color": "#616161" }]
   },
   {
     "featureType": "poi.park",
     "elementType": "labels.text.stroke",
-    "stylers": [{"color": "#1b1b1b"}]
+    "stylers": [{ "color": "#1b1b1b" }]
   },
   {
     "featureType": "road",
     "elementType": "geometry.fill",
-    "stylers": [{"color": "#2c2c2c"}]
+    "stylers": [{ "color": "#2c2c2c" }]
   },
   {
     "featureType": "road",
     "elementType": "labels.text.fill",
-    "stylers": [{"color": "#8a8a8a"}]
+    "stylers": [{ "color": "#8a8a8a" }]
   },
   {
     "featureType": "road.arterial",
     "elementType": "geometry",
-    "stylers": [{"color": "#373737"}]
+    "stylers": [{ "color": "#373737" }]
   },
   {
     "featureType": "road.highway",
     "elementType": "geometry",
-    "stylers": [{"color": "#3c3c3c"}]
+    "stylers": [{ "color": "#3c3c3c" }]
   },
   {
     "featureType": "road.highway.controlled_access",
     "elementType": "geometry",
-    "stylers": [{"color": "#4e4e4e"}]
+    "stylers": [{ "color": "#4e4e4e" }]
   },
   {
     "featureType": "road.local",
     "elementType": "labels.text.fill",
-    "stylers": [{"color": "#616161"}]
+    "stylers": [{ "color": "#616161" }]
   },
   {
     "featureType": "transit",
     "elementType": "labels.text.fill",
-    "stylers": [{"color": "#757575"}]
+    "stylers": [{ "color": "#757575" }]
   },
   {
     "featureType": "water",
     "elementType": "geometry",
-    "stylers": [{"color": "#000000"}]
+    "stylers": [{ "color": "#000000" }]
   },
   {
     "featureType": "water",
     "elementType": "labels.text.fill",
-    "stylers": [{"color": "#3d3d3d"}]
+    "stylers": [{ "color": "#3d3d3d" }]
   }
 ];

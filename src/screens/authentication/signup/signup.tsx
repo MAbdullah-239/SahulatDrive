@@ -13,6 +13,10 @@ import {
 } from 'react-native';
 import {Colors} from '../../../generalStyles/colors';
 import {FontFamily} from '../../../generalStyles/generalFonts';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../../../navigation/authStackNavigation';
+import { AuthStack } from '../../../constants/stack/authStack/authStack';
 
 type Role = 'Driver' | 'Mechanic' | 'Workshop';
 
@@ -28,8 +32,25 @@ interface SignupProps {
 }
 
 const Signup: React.FC<SignupProps> = ({onBack, onContinue}) => {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [selectedRole, setSelectedRole] = useState<Role>('Driver');
   const [showPassword, setShowPassword] = useState(false);
+
+  const handleContinue = () => {
+    if (onContinue) {
+      onContinue();
+    } else {
+      navigation.navigate(AuthStack.nestedScreens.VerifyOTP.name);
+    }
+  };
+
+  const handleBack = () => {
+    if (onBack) {
+      onBack();
+    } else {
+      navigation.goBack();
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -42,7 +63,7 @@ const Signup: React.FC<SignupProps> = ({onBack, onContinue}) => {
           showsVerticalScrollIndicator={false}>
           
           {/* ── Header ── */}
-          <TouchableOpacity style={styles.backButton} onPress={onBack}>
+          <TouchableOpacity style={styles.backButton} onPress={handleBack}>
             <Text style={styles.backIcon}>←</Text>
           </TouchableOpacity>
 
@@ -149,7 +170,7 @@ const Signup: React.FC<SignupProps> = ({onBack, onContinue}) => {
           {/* ── Action Button ── */}
           <TouchableOpacity
             style={styles.primaryBtn}
-            onPress={onContinue}
+            onPress={handleContinue}
             activeOpacity={0.85}>
             <Text style={styles.primaryBtnText}>Continue</Text>
           </TouchableOpacity>

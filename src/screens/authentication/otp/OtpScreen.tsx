@@ -12,6 +12,9 @@ import {
 } from 'react-native';
 import {Colors} from '../../../generalStyles/colors';
 import {FontFamily} from '../../../generalStyles/generalFonts';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../../../navigation/rootNavigation';
 
 interface OtpScreenProps {
   onBack?: () => void;
@@ -24,6 +27,7 @@ const OtpScreen: React.FC<OtpScreenProps> = ({
   onVerify,
   phoneNumber = '+92 311 2345678',
 }) => {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [otp, setOtp] = useState<string[]>(['', '', '', '']);
   const inputs = useRef<Array<TextInput | null>>([]);
 
@@ -48,7 +52,14 @@ const OtpScreen: React.FC<OtpScreenProps> = ({
   const handleVerify = () => {
     const otpCode = otp.join('');
     if (otpCode.length === 4) {
-      onVerify?.(otpCode);
+      if (onVerify) {
+        onVerify(otpCode);
+      } else {
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'MainStack' as never }],
+        });
+      }
     }
   };
 
@@ -61,7 +72,13 @@ const OtpScreen: React.FC<OtpScreenProps> = ({
         <View style={styles.content}>
           {/* ── Header ── */}
           <View style={styles.header}>
-            <TouchableOpacity style={styles.backButton} onPress={onBack}>
+            <TouchableOpacity style={styles.backButton} onPress={() => {
+              if (onBack) {
+                onBack();
+              } else {
+                navigation.goBack();
+              }
+            }}>
               <Text style={styles.backIcon}>←</Text>
             </TouchableOpacity>
           </View>

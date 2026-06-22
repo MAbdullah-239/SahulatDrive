@@ -11,6 +11,10 @@ import {
 } from 'react-native';
 import { Colors } from '../../generalStyles/colors';
 import { FontFamily } from '../../generalStyles/generalFonts';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../../navigation/authStackNavigation';
+import { AuthStack } from '../../constants/stack/authStack/authStack';
 
 const { width, height } = Dimensions.get('window');
 
@@ -54,6 +58,7 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
   onGetStarted,
   onSignIn,
 }) => {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [activeIndex, setActiveIndex] = useState<number>(0);
   const flatListRef = useRef<FlatList<OnboardingSlide>>(null);
 
@@ -67,7 +72,11 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
       flatListRef.current?.scrollToIndex({ index: activeIndex + 1 });
       setActiveIndex(activeIndex + 1);
     } else {
-      onGetStarted?.();
+      if (onGetStarted) {
+        onGetStarted();
+      } else {
+        navigation.navigate(AuthStack.nestedScreens.Signup.name);
+      }
     }
   };
 
