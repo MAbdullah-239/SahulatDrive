@@ -2734,6 +2734,7 @@ __metadata:
     eslint: "npm:^8.19.0"
     formik: "npm:^2.4.9"
     jest: "npm:^29.6.3"
+    lucide-react-native: "npm:0.475.0"
     prettier: "npm:2.8.8"
     react: "npm:19.0.0"
     react-native: "npm:0.79.0"
@@ -6707,6 +6708,17 @@ __metadata:
   dependencies:
     yallist: "npm:^3.0.2"
   checksum: 10c0/89b2ef2ef45f543011e38737b8a8622a2f8998cddf0e5437174ef8f1f70a8b9d14a918ab3e232cb3ba343b7abddffa667f0b59075b2b80e6b4d63c3de6127482
+  languageName: node
+  linkType: hard
+
+"lucide-react-native@npm:0.475.0":
+  version: 0.475.0
+  resolution: "lucide-react-native@npm:0.475.0"
+  peerDependencies:
+    react: ^16.5.1 || ^17.0.0 || ^18.0.0
+    react-native: "*"
+    react-native-svg: ^12.0.0 || ^13.0.0 || ^14.0.0 || ^15.0.0
+  checksum: 10c0/47641b95d0dca8c257102c62b4d7549ec9cde5d4320ef6bb4d9073ce30f3c66bd654f0b0c5fcc2d50b140be1b84b8ae777d24e3fd4fe9a6ce5f831ad815c192f
   languageName: node
   linkType: hard
 

@@ -1,247 +1,196 @@
-import React, { useState } from 'react';
+import React, {useState} from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  Platform,
-  Alert,
-  Modal,
-  TextInput,
-  Image,
-  Switch,
+  View, Text, StyleSheet, TouchableOpacity,
+  ScrollView, Platform, Alert, Modal, TextInput, Switch,
 } from 'react-native';
-import { Colors } from '../../../generalStyles/colors';
-import { FontFamily } from '../../../generalStyles/generalFonts';
+import {Colors} from '../../../generalStyles/colors';
+import {FontFamily} from '../../../generalStyles/generalFonts';
+import {
+  User, Phone, Car, Plus, Pencil, Trash2,
+  CreditCard, ShieldAlert, Star, Globe, Bell,
+  ChevronRight, LogOut, X, Check, Calendar,
+} from 'lucide-react-native';
 
 interface Vehicle {
-  id: string;
-  model: string;
-  plate: string;
-  year: string;
-  emoji: string;
+  id: string; model: string; plate: string; year: string;
 }
 
 const initialVehicles: Vehicle[] = [
-  { id: 'v1', model: 'Toyota Corolla', plate: 'LHR-4521', year: '2019', emoji: '🚙' },
-  { id: 'v2', model: 'Honda Civic', plate: 'MN-8899', year: '2021', emoji: '🚗' },
+  {id: 'v1', model: 'Toyota Corolla', plate: 'LHR-4521', year: '2019'},
+  {id: 'v2', model: 'Honda Civic', plate: 'MN-8899', year: '2021'},
+];
+
+const SETTINGS = [
+  {id: 'payments', label: 'Payment History', Icon: CreditCard, chevron: true, badge: null},
+  {id: 'sos', label: 'SOS Emergency Contacts', Icon: ShieldAlert, chevron: false, badge: 'Active'},
+  {id: 'reviews', label: 'My Ratings & Reviews', Icon: Star, chevron: true, badge: null},
 ];
 
 export const Profile: React.FC = () => {
   const [vehicles, setVehicles] = useState<Vehicle[]>(initialVehicles);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
-  
-  // Form fields for adding/editing vehicles
   const [model, setModel] = useState('');
   const [plate, setPlate] = useState('');
   const [year, setYear] = useState('');
-
-  // Settings toggles
   const [notifications, setNotifications] = useState(true);
   const [language, setLanguage] = useState<'EN' | 'UR'>('EN');
 
-  const openAddModal = () => {
-    setEditingVehicle(null);
-    setModel('');
-    setPlate('');
-    setYear('');
-    setIsModalOpen(true);
+  const openAdd = () => {
+    setEditingVehicle(null); setModel(''); setPlate(''); setYear('');
+    setModalOpen(true);
   };
 
-  const openEditModal = (vehicle: Vehicle) => {
-    setEditingVehicle(vehicle);
-    setModel(vehicle.model);
-    setPlate(vehicle.plate);
-    setYear(vehicle.year);
-    setIsModalOpen(true);
+  const openEdit = (v: Vehicle) => {
+    setEditingVehicle(v); setModel(v.model); setPlate(v.plate); setYear(v.year);
+    setModalOpen(true);
   };
 
   const saveVehicle = () => {
     if (!model.trim() || !plate.trim() || !year.trim()) {
-      Alert.alert('Missing Info', 'Please fill in all vehicle details.');
-      return;
+      Alert.alert('Missing Info', 'Please fill in all fields.'); return;
     }
-
     if (editingVehicle) {
-      // Edit
-      setVehicles(prev =>
-        prev.map(v =>
-          v.id === editingVehicle.id
-            ? { ...v, model, plate, year }
-            : v
-        )
-      );
+      setVehicles(prev => prev.map(v => v.id === editingVehicle.id ? {...v, model, plate, year} : v));
     } else {
-      // Add
-      const newVehicle: Vehicle = {
-        id: `v_${Date.now()}`,
-        model,
-        plate,
-        year,
-        emoji: model.toLowerCase().includes('truck') || model.toLowerCase().includes('suv') ? '🚙' : '🚗',
-      };
-      setVehicles(prev => [...prev, newVehicle]);
+      setVehicles(prev => [...prev, {id: `v_${Date.now()}`, model, plate, year}]);
     }
-    setIsModalOpen(false);
+    setModalOpen(false);
   };
 
-  const deleteVehicle = (id: string) => {
-    Alert.alert(
-      'Remove Vehicle',
-      'Are you sure you want to delete this vehicle from your profile?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => {
-            setVehicles(prev => prev.filter(v => v.id !== id));
-          },
-        },
-      ]
-    );
-  };
-
-  const handleLogout = () => {
-    Alert.alert('Logout', 'Are you sure you want to sign out of Sahulat Drive?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Logout', style: 'destructive', onPress: () => {} },
+  const deleteVehicle = (id: string) =>
+    Alert.alert('Remove Vehicle', 'Delete this vehicle from your profile?', [
+      {text: 'Cancel', style: 'cancel'},
+      {text: 'Delete', style: 'destructive', onPress: () => setVehicles(prev => prev.filter(v => v.id !== id))},
     ]);
-  };
+
+  const handleLogout = () =>
+    Alert.alert('Log Out', 'Are you sure you want to sign out of Sahulat Drive?', [
+      {text: 'Cancel', style: 'cancel'},
+      {text: 'Log Out', style: 'destructive', onPress: () => {}},
+    ]);
 
   return (
     <View style={styles.container}>
-      <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        
-        {/* ── Profile Header Section ── */}
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+
+        {/* ── Profile Header ── */}
         <View style={styles.profileHeader}>
-          <View style={styles.avatarBorder}>
+          <View style={styles.avatarWrap}>
             <View style={styles.avatarInner}>
-              <Text style={styles.avatarEmoji}>👱‍♂️</Text>
+              <User size={42} color="#FFFFFF" strokeWidth={1.5} />
             </View>
-            <View style={styles.onlineStatus} />
+            <View style={styles.onlineBadge} />
           </View>
           <Text style={styles.profileName}>Ahmed Raza</Text>
-          <Text style={styles.profilePhone}>+92 300 1234567</Text>
+          <View style={styles.phoneRow}>
+            <Phone size={13} color={Colors.GreyText} strokeWidth={1.8} />
+            <Text style={styles.phoneText}>+92 300 1234567</Text>
+          </View>
           <TouchableOpacity style={styles.editProfileBtn} activeOpacity={0.7}>
-            <Text style={styles.editProfileBtnText}>✏️ Edit Profile</Text>
+            <Pencil size={13} color={Colors.White} strokeWidth={2} />
+            <Text style={styles.editProfileBtnText}>Edit Profile</Text>
           </TouchableOpacity>
         </View>
 
-        {/* ── Saved Vehicles Section ── */}
-        <View style={styles.sectionHeaderRow}>
+        {/* ── Saved Vehicles ── */}
+        <View style={styles.sectionRow}>
           <Text style={styles.sectionTitle}>Saved Vehicles</Text>
-          <TouchableOpacity onPress={openAddModal} activeOpacity={0.7} style={styles.addVehicleLink}>
-            <Text style={styles.addVehicleText}>+ Add New</Text>
+          <TouchableOpacity onPress={openAdd} style={styles.addBtn} activeOpacity={0.7}>
+            <Plus size={15} color="#E8490F" strokeWidth={2.5} />
+            <Text style={styles.addBtnText}>Add New</Text>
           </TouchableOpacity>
         </View>
 
-        <View style={styles.vehiclesList}>
-          {vehicles.length === 0 ? (
-            <View style={styles.noVehiclesCard}>
-              <Text style={styles.noVehiclesText}>No vehicles saved yet.</Text>
-            </View>
-          ) : (
-            vehicles.map(vehicle => (
-              <View key={vehicle.id} style={styles.vehicleCard}>
-                <View style={styles.vehicleInfoRow}>
-                  <View style={styles.vehicleEmojiBox}>
-                    <Text style={styles.vehicleEmoji}>{vehicle.emoji}</Text>
-                  </View>
-                  <View style={styles.vehicleTextWrapper}>
-                    <Text style={styles.vehicleModel}>{vehicle.model}</Text>
-                    <Text style={styles.vehiclePlate}>{vehicle.plate}</Text>
-                    <Text style={styles.vehicleYear}>Year: {vehicle.year}</Text>
-                  </View>
-                </View>
-
-                {/* Edit & Delete Action Buttons */}
-                <View style={styles.vehicleActionsRow}>
-                  <TouchableOpacity
-                    style={[styles.vehicleActionBtn, styles.editActionBtn]}
-                    onPress={() => openEditModal(vehicle)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.vehicleActionBtnText}>Edit</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={[styles.vehicleActionBtn, styles.deleteActionBtn]}
-                    onPress={() => deleteVehicle(vehicle.id)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={[styles.vehicleActionBtnText, styles.deleteActionBtnText]}>Delete</Text>
-                  </TouchableOpacity>
+        {vehicles.length === 0 ? (
+          <View style={styles.emptyCard}>
+            <Car size={28} color={Colors.GreyText} strokeWidth={1.5} />
+            <Text style={styles.emptyText}>No vehicles saved yet</Text>
+          </View>
+        ) : vehicles.map(v => (
+          <View key={v.id} style={styles.vehicleCard}>
+            <View style={styles.vehicleCardTop}>
+              <View style={styles.vehicleIconBox}>
+                <Car size={22} color="#E8490F" strokeWidth={2} />
+              </View>
+              <View style={styles.vehicleInfo}>
+                <Text style={styles.vehicleModel}>{v.model}</Text>
+                <View style={styles.vehicleMeta}>
+                  <Text style={styles.vehiclePlate}>{v.plate}</Text>
+                  <View style={styles.vehicleMetaDot} />
+                  <Calendar size={11} color={Colors.GreyText} strokeWidth={1.8} />
+                  <Text style={styles.vehicleYear}>{v.year}</Text>
                 </View>
               </View>
-            ))
-          )}
-        </View>
-
-        {/* ── Settings Section ── */}
-        <Text style={styles.sectionTitleHeader}>App Settings</Text>
-        <View style={styles.settingsCard}>
-          {/* Payment History */}
-          <TouchableOpacity style={styles.settingItem} activeOpacity={0.7}>
-            <View style={styles.settingLeft}>
-              <Text style={styles.settingIcon}>💳</Text>
-              <Text style={styles.settingLabel}>Payment History</Text>
             </View>
-            <Text style={styles.settingArrow}>›</Text>
-          </TouchableOpacity>
-
-          {/* Saved Emergency Contacts */}
-          <TouchableOpacity style={styles.settingItem} activeOpacity={0.7}>
-            <View style={styles.settingLeft}>
-              <Text style={styles.settingIcon}>📞</Text>
-              <Text style={styles.settingLabel}>SOS Emergency Contacts</Text>
-            </View>
-            <View style={styles.settingRightBadge}>
-              <Text style={styles.badgeText}>Active</Text>
-            </View>
-          </TouchableOpacity>
-
-          {/* Ratings & Reviews */}
-          <TouchableOpacity style={styles.settingItem} activeOpacity={0.7}>
-            <View style={styles.settingLeft}>
-              <Text style={styles.settingIcon}>⭐</Text>
-              <Text style={styles.settingLabel}>My Ratings & Reviews</Text>
-            </View>
-            <Text style={styles.settingArrow}>›</Text>
-          </TouchableOpacity>
-
-          {/* Language Toggle */}
-          <View style={[styles.settingItem, styles.noBorder]}>
-            <View style={styles.settingLeft}>
-              <Text style={styles.settingIcon}>🌐</Text>
-              <Text style={styles.settingLabel}>Language Settings</Text>
-            </View>
-            <View style={styles.langSelectorRow}>
-              <TouchableOpacity
-                style={[styles.langChip, language === 'EN' && styles.langChipActive]}
-                onPress={() => setLanguage('EN')}
-              >
-                <Text style={[styles.langChipText, language === 'EN' && styles.langChipTextActive]}>English</Text>
+            <View style={styles.vehicleActions}>
+              <TouchableOpacity style={styles.vehicleEditBtn} onPress={() => openEdit(v)} activeOpacity={0.7}>
+                <Pencil size={14} color={Colors.White} strokeWidth={2} />
+                <Text style={styles.vehicleEditBtnText}>Edit</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.langChip, language === 'UR' && styles.langChipActive]}
-                onPress={() => setLanguage('UR')}
-              >
-                <Text style={[styles.langChipText, language === 'UR' && styles.langChipTextActive]}>Urdu</Text>
+              <TouchableOpacity style={styles.vehicleDeleteBtn} onPress={() => deleteVehicle(v.id)} activeOpacity={0.7}>
+                <Trash2 size={14} color="#EA4335" strokeWidth={2} />
+                <Text style={styles.vehicleDeleteBtnText}>Delete</Text>
               </TouchableOpacity>
             </View>
           </View>
+        ))}
 
-          {/* Notifications Switch */}
-          <View style={[styles.settingItem, styles.noBorder, { paddingTop: 6 }]}>
+        {/* ── App Settings ── */}
+        <Text style={styles.sectionTitleStandalone}>App Settings</Text>
+        <View style={styles.settingsCard}>
+          {SETTINGS.map(({id, label, Icon, chevron, badge}, i) => (
+            <TouchableOpacity key={id}
+              style={[styles.settingRow, i === SETTINGS.length - 1 && styles.noBorder]}
+              activeOpacity={0.7}>
+              <View style={styles.settingLeft}>
+                <View style={styles.settingIconWrap}>
+                  <Icon size={17} color="#E8490F" strokeWidth={1.8} />
+                </View>
+                <Text style={styles.settingLabel}>{label}</Text>
+              </View>
+              {badge ? (
+                <View style={styles.activeBadge}>
+                  <Check size={10} color="#10B981" strokeWidth={2.5} />
+                  <Text style={styles.activeBadgeText}>{badge}</Text>
+                </View>
+              ) : chevron ? (
+                <ChevronRight size={18} color={Colors.GreyText} strokeWidth={1.8} />
+              ) : null}
+            </TouchableOpacity>
+          ))}
+
+          {/* Language */}
+          <View style={styles.settingRow}>
             <View style={styles.settingLeft}>
-              <Text style={styles.settingIcon}>🔔</Text>
+              <View style={styles.settingIconWrap}>
+                <Globe size={17} color="#E8490F" strokeWidth={1.8} />
+              </View>
+              <Text style={styles.settingLabel}>Language</Text>
+            </View>
+            <View style={styles.langToggle}>
+              {(['EN', 'UR'] as const).map(lang => (
+                <TouchableOpacity key={lang}
+                  style={[styles.langBtn, language === lang && styles.langBtnActive]}
+                  onPress={() => setLanguage(lang)}>
+                  <Text style={[styles.langBtnText, language === lang && styles.langBtnTextActive]}>
+                    {lang === 'EN' ? 'English' : 'اردو'}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          {/* Notifications */}
+          <View style={[styles.settingRow, styles.noBorder]}>
+            <View style={styles.settingLeft}>
+              <View style={styles.settingIconWrap}>
+                <Bell size={17} color="#E8490F" strokeWidth={1.8} />
+              </View>
               <Text style={styles.settingLabel}>Push Notifications</Text>
             </View>
             <Switch
-              trackColor={{ false: '#2C2C2E', true: '#E8490F' }}
+              trackColor={{false: '#2C2C2E', true: '#E8490F'}}
               thumbColor={notifications ? '#FFFFFF' : '#8E8E93'}
               ios_backgroundColor="#2C2C2E"
               onValueChange={setNotifications}
@@ -250,86 +199,56 @@ export const Profile: React.FC = () => {
           </View>
         </View>
 
-        {/* ── Account Section & Logout ── */}
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout} activeOpacity={0.8}>
-          <Text style={styles.logoutIcon}>🚪</Text>
-          <Text style={styles.logoutButtonText}>Log Out Account</Text>
+        {/* ── Logout ── */}
+        <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout} activeOpacity={0.85}>
+          <LogOut size={18} color="#EA4335" strokeWidth={2} />
+          <Text style={styles.logoutBtnText}>Log Out Account</Text>
         </TouchableOpacity>
-
-        <Text style={styles.appVersionText}>Sahulat Drive v1.0.0 (Production)</Text>
-
+        <Text style={styles.versionText}>Sahulat Drive v1.0.0</Text>
         <View style={styles.bottomSpacer} />
       </ScrollView>
 
-      {/* ── ADD/EDIT VEHICLE MODAL ── */}
-      <Modal
-        visible={isModalOpen}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setIsModalOpen(false)}
-      >
-        <View style={styles.modalBackdrop}>
-          <TouchableOpacity style={styles.modalFlexSpacer} activeOpacity={1} onPress={() => setIsModalOpen(false)} />
-          <View style={styles.modalSheet}>
-            <View style={styles.modalIndicator} />
-            <Text style={styles.modalTitle}>
-              {editingVehicle ? 'Edit Vehicle Details' : 'Add New Vehicle'}
-            </Text>
-
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Car Model / Make</Text>
-              <TextInput
-                style={styles.textInput}
-                placeholder="e.g. Honda Civic, Toyota Yaris"
-                placeholderTextColor={Colors.Grey || '#868686'}
-                value={model}
-                onChangeText={setModel}
-                selectionColor="#E8490F"
-              />
-            </View>
-
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>License Number Plate</Text>
-              <TextInput
-                style={styles.textInput}
-                placeholder="e.g. LHR-4521, MN-8899"
-                placeholderTextColor={Colors.Grey || '#868686'}
-                value={plate}
-                onChangeText={setPlate}
-                autoCapitalize="characters"
-                selectionColor="#E8490F"
-              />
-            </View>
-
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Manufacturing Year</Text>
-              <TextInput
-                style={styles.textInput}
-                placeholder="e.g. 2019, 2022"
-                placeholderTextColor={Colors.Grey || '#868686'}
-                value={year}
-                onChangeText={setYear}
-                keyboardType="numeric"
-                maxLength={4}
-                selectionColor="#E8490F"
-              />
-            </View>
-
-            <View style={styles.modalBtnRow}>
-              <TouchableOpacity
-                style={[styles.modalBtn, styles.modalCancelBtn]}
-                onPress={() => setIsModalOpen(false)}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.modalCancelBtnText}>Cancel</Text>
+      {/* ── Add/Edit Vehicle Modal ── */}
+      <Modal visible={modalOpen} animationType="slide" transparent onRequestClose={() => setModalOpen(false)}>
+        <View style={ms.backdrop}>
+          <TouchableOpacity style={ms.flex} activeOpacity={1} onPress={() => setModalOpen(false)} />
+          <View style={ms.sheet}>
+            <View style={ms.indicator} />
+            <View style={ms.headerRow}>
+              <Text style={ms.title}>{editingVehicle ? 'Edit Vehicle' : 'Add New Vehicle'}</Text>
+              <TouchableOpacity onPress={() => setModalOpen(false)} style={ms.closeBtn}>
+                <X size={18} color={Colors.GreyText} strokeWidth={2} />
               </TouchableOpacity>
+            </View>
 
-              <TouchableOpacity
-                style={[styles.modalBtn, styles.modalSaveBtn]}
-                onPress={saveVehicle}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.modalSaveBtnText}>Save Vehicle</Text>
+            {[
+              {label: 'Car Model / Make', placeholder: 'e.g. Toyota Corolla', value: model, setter: setModel, caps: 'sentences' as const},
+              {label: 'License Plate', placeholder: 'e.g. LHR-4521', value: plate, setter: setPlate, caps: 'characters' as const},
+              {label: 'Year', placeholder: 'e.g. 2019', value: year, setter: setYear, caps: 'none' as const},
+            ].map(f => (
+              <View key={f.label} style={ms.inputWrap}>
+                <Text style={ms.inputLabel}>{f.label}</Text>
+                <TextInput
+                  style={ms.input}
+                  placeholder={f.placeholder}
+                  placeholderTextColor={Colors.Grey}
+                  value={f.value}
+                  onChangeText={f.setter}
+                  autoCapitalize={f.caps}
+                  keyboardType={f.label === 'Year' ? 'numeric' : 'default'}
+                  maxLength={f.label === 'Year' ? 4 : undefined}
+                  selectionColor="#E8490F"
+                />
+              </View>
+            ))}
+
+            <View style={ms.btnRow}>
+              <TouchableOpacity style={ms.cancelBtn} onPress={() => setModalOpen(false)} activeOpacity={0.7}>
+                <Text style={ms.cancelBtnText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={ms.saveBtn} onPress={saveVehicle} activeOpacity={0.85}>
+                <Check size={16} color="#FFFFFF" strokeWidth={2.5} />
+                <Text style={ms.saveBtnText}>Save Vehicle</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -342,375 +261,72 @@ export const Profile: React.FC = () => {
 export default Profile;
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.bgColor || '#030005',
-  },
-  scrollContainer: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: 24,
-    paddingTop: Platform.OS === 'android' ? 52 : 24,
-  },
-  /* Profile Header */
-  profileHeader: {
-    alignItems: 'center',
-    marginBottom: 28,
-  },
-  avatarBorder: {
-    width: 106,
-    height: 106,
-    borderRadius: 36,
-    borderWidth: 3,
-    borderColor: '#E8490F',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-    backgroundColor: 'rgba(255,255,255,0.03)',
-  },
-  avatarInner: {
-    width: 92,
-    height: 92,
-    borderRadius: 30,
-    backgroundColor: '#E8490F',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarEmoji: {
-    fontSize: 54,
-  },
-  onlineStatus: {
-    position: 'absolute',
-    bottom: -2,
-    right: -2,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#10B981',
-    borderWidth: 4,
-    borderColor: '#030005',
-  },
-  profileName: {
-    fontFamily: FontFamily.UrbanistBold || 'System',
-    fontSize: 24,
-    color: Colors.White || '#FFFFFF',
-    marginBottom: 4,
-  },
-  profilePhone: {
-    fontFamily: FontFamily.UrbanistMedium || 'System',
-    fontSize: 14,
-    color: Colors.GreyText || '#A7A7A7',
-    marginBottom: 16,
-  },
-  editProfileBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.04)',
-  },
-  editProfileBtnText: {
-    fontFamily: FontFamily.UrbanistSemiBold || 'System',
-    fontSize: 13,
-    color: Colors.White || '#FFFFFF',
-  },
-  /* Saved Vehicles */
-  sectionHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontFamily: FontFamily.UrbanistBold || 'System',
-    fontSize: 18,
-    color: Colors.White || '#FFFFFF',
-  },
-  addVehicleLink: {
-    paddingVertical: 4,
-  },
-  addVehicleText: {
-    fontFamily: FontFamily.UrbanistBold || 'System',
-    fontSize: 14,
-    color: '#E8490F',
-  },
-  vehiclesList: {
-    gap: 12,
-    marginBottom: 28,
-  },
-  noVehiclesCard: {
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    borderRadius: 16,
-    padding: 20,
-    alignItems: 'center',
-  },
-  noVehiclesText: {
-    fontFamily: FontFamily.UrbanistRegular || 'System',
-    fontSize: 14,
-    color: Colors.GreyText || '#A7A7A7',
-  },
-  vehicleCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.04)',
-    padding: 16,
-  },
-  vehicleInfoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  vehicleEmojiBox: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
-  },
-  vehicleEmoji: {
-    fontSize: 24,
-  },
-  vehicleTextWrapper: {
-    flex: 1,
-  },
-  vehicleModel: {
-    fontFamily: FontFamily.UrbanistBold || 'System',
-    fontSize: 16,
-    color: Colors.White || '#FFFFFF',
-    marginBottom: 2,
-  },
-  vehiclePlate: {
-    fontFamily: FontFamily.UrbanistBold || 'System',
-    fontSize: 13,
-    color: '#E8490F',
-    letterSpacing: 0.5,
-    marginBottom: 2,
-  },
-  vehicleYear: {
-    fontFamily: FontFamily.UrbanistRegular || 'System',
-    fontSize: 12,
-    color: Colors.GreyText || '#A7A7A7',
-  },
-  vehicleActionsRow: {
-    flexDirection: 'row',
-    gap: 10,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.04)',
-    paddingTop: 12,
-  },
-  vehicleActionBtn: {
-    flex: 1,
-    height: 38,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
-  },
-  vehicleActionBtnText: {
-    fontFamily: FontFamily.UrbanistSemiBold || 'System',
-    fontSize: 13,
-    color: Colors.White || '#FFFFFF',
-  },
-  deleteActionBtn: {
-    backgroundColor: 'rgba(234, 67, 53, 0.08)',
-  },
-  deleteActionBtnText: {
-    color: '#EA4335',
-  },
-  /* Settings List */
-  sectionTitleHeader: {
-    fontFamily: FontFamily.UrbanistBold || 'System',
-    fontSize: 18,
-    color: Colors.White || '#FFFFFF',
-    marginBottom: 16,
-  },
-  settingsCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.04)',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    marginBottom: 28,
-  },
-  settingItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
-  },
-  noBorder: {
-    borderBottomWidth: 0,
-  },
-  settingLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-  },
-  settingIcon: {
-    fontSize: 18,
-  },
-  settingLabel: {
-    fontFamily: FontFamily.UrbanistMedium || 'System',
-    fontSize: 15,
-    color: Colors.White || '#FFFFFF',
-  },
-  settingArrow: {
-    fontSize: 22,
-    color: Colors.Grey || '#868686',
-    fontWeight: '300',
-  },
-  settingRightBadge: {
-    backgroundColor: 'rgba(16, 185, 129, 0.12)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  badgeText: {
-    fontFamily: FontFamily.UrbanistBold || 'System',
-    color: '#10B981',
-    fontSize: 11,
-  },
-  langSelectorRow: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderRadius: 8,
-    padding: 2,
-  },
-  langChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  langChipActive: {
-    backgroundColor: '#E8490F',
-  },
-  langChipText: {
-    fontFamily: FontFamily.UrbanistSemiBold || 'System',
-    color: Colors.GreyText || '#A7A7A7',
-    fontSize: 12,
-  },
-  langChipTextActive: {
-    color: Colors.White || '#FFFFFF',
-    fontFamily: FontFamily.UrbanistBold || 'System',
-  },
-  /* Logout */
-  logoutButton: {
-    flexDirection: 'row',
-    height: 52,
-    backgroundColor: 'rgba(234, 67, 53, 0.06)',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(234, 67, 53, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 20,
-  },
-  logoutIcon: {
-    fontSize: 18,
-  },
-  logoutButtonText: {
-    fontFamily: FontFamily.UrbanistBold || 'System',
-    fontSize: 15,
-    color: '#EA4335',
-  },
-  appVersionText: {
-    fontFamily: FontFamily.UrbanistRegular || 'System',
-    fontSize: 12,
-    color: Colors.Grey || '#868686',
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  bottomSpacer: {
-    height: 100,
-  },
-  /* Modal styling */
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(3, 0, 5, 0.75)',
-    justifyContent: 'flex-end',
-  },
-  modalFlexSpacer: {
-    flex: 1,
-  },
-  modalSheet: {
-    backgroundColor: '#0F1013',
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    paddingTop: 8,
-    paddingBottom: Platform.OS === 'ios' ? 34 : 24,
-    paddingHorizontal: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
-  },
-  modalIndicator: {
-    width: 44,
-    height: 5,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    borderRadius: 3,
-    alignSelf: 'center',
-    marginBottom: 20,
-  },
-  modalTitle: {
-    fontFamily: FontFamily.UrbanistBold || 'System',
-    fontSize: 20,
-    color: Colors.White || '#FFFFFF',
-    marginBottom: 20,
-  },
-  inputContainer: {
-    marginBottom: 16,
-  },
-  inputLabel: {
-    fontFamily: FontFamily.UrbanistMedium || 'System',
-    fontSize: 13,
-    color: Colors.GreyText || '#A7A7A7',
-    marginBottom: 8,
-  },
-  textInput: {
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.04)',
-    height: 48,
-    paddingHorizontal: 16,
-    fontFamily: FontFamily.UrbanistMedium || 'System',
-    fontSize: 15,
-    color: Colors.White || '#FFFFFF',
-  },
-  modalBtnRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 12,
-  },
-  modalBtn: {
-    flex: 1,
-    height: 48,
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalCancelBtn: {
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-  },
-  modalCancelBtnText: {
-    fontFamily: FontFamily.UrbanistSemiBold || 'System',
-    fontSize: 14,
-    color: Colors.White || '#FFFFFF',
-  },
-  modalSaveBtn: {
-    backgroundColor: '#E8490F',
-  },
-  modalSaveBtnText: {
-    fontFamily: FontFamily.UrbanistBold || 'System',
-    fontSize: 14,
-    color: '#FFFFFF',
-  },
+  container: {flex: 1, backgroundColor: Colors.bgColor},
+  scrollContent: {paddingHorizontal: 20, paddingTop: Platform.OS === 'android' ? 52 : 24},
+  profileHeader: {alignItems: 'center', marginBottom: 32},
+  avatarWrap: {width: 100, height: 100, borderRadius: 32, borderWidth: 2.5, borderColor: '#E8490F', justifyContent: 'center', alignItems: 'center', marginBottom: 16, backgroundColor: 'rgba(232,73,15,0.06)'},
+  avatarInner: {width: 84, height: 84, borderRadius: 27, backgroundColor: '#E8490F', justifyContent: 'center', alignItems: 'center'},
+  onlineBadge: {position: 'absolute', bottom: -2, right: -2, width: 22, height: 22, borderRadius: 11, backgroundColor: '#10B981', borderWidth: 3.5, borderColor: Colors.bgColor},
+  profileName: {fontFamily: FontFamily.UrbanistBold, fontSize: 24, color: Colors.White, marginBottom: 6},
+  phoneRow: {flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 14},
+  phoneText: {fontFamily: FontFamily.UrbanistMedium, fontSize: 14, color: Colors.GreyText},
+  editProfileBtn: {flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 16, paddingVertical: 9, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.04)'},
+  editProfileBtnText: {fontFamily: FontFamily.UrbanistSemiBold, fontSize: 13, color: Colors.White},
+  sectionRow: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14},
+  sectionTitle: {fontFamily: FontFamily.UrbanistBold, fontSize: 18, color: Colors.White},
+  addBtn: {flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, backgroundColor: 'rgba(232,73,15,0.08)', borderWidth: 1, borderColor: 'rgba(232,73,15,0.18)'},
+  addBtnText: {fontFamily: FontFamily.UrbanistBold, fontSize: 13, color: '#E8490F'},
+  emptyCard: {backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 16, padding: 24, alignItems: 'center', gap: 10, marginBottom: 28},
+  emptyText: {fontFamily: FontFamily.UrbanistRegular, fontSize: 14, color: Colors.GreyText},
+  vehicleCard: {backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.04)', padding: 16, marginBottom: 12},
+  vehicleCardTop: {flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 14},
+  vehicleIconBox: {width: 50, height: 50, borderRadius: 16, backgroundColor: 'rgba(232,73,15,0.1)', justifyContent: 'center', alignItems: 'center'},
+  vehicleInfo: {flex: 1},
+  vehicleModel: {fontFamily: FontFamily.UrbanistBold, fontSize: 16, color: Colors.White, marginBottom: 5},
+  vehicleMeta: {flexDirection: 'row', alignItems: 'center', gap: 6},
+  vehiclePlate: {fontFamily: FontFamily.UrbanistBold, fontSize: 13, color: '#E8490F', letterSpacing: 0.5},
+  vehicleMetaDot: {width: 3, height: 3, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.2)'},
+  vehicleYear: {fontFamily: FontFamily.UrbanistRegular, fontSize: 12, color: Colors.GreyText},
+  vehicleActions: {flexDirection: 'row', gap: 10, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.04)', paddingTop: 12},
+  vehicleEditBtn: {flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6, height: 38, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.06)'},
+  vehicleEditBtnText: {fontFamily: FontFamily.UrbanistSemiBold, fontSize: 13, color: Colors.White},
+  vehicleDeleteBtn: {flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6, height: 38, borderRadius: 10, backgroundColor: 'rgba(234,67,53,0.08)'},
+  vehicleDeleteBtnText: {fontFamily: FontFamily.UrbanistSemiBold, fontSize: 13, color: '#EA4335'},
+  sectionTitleStandalone: {fontFamily: FontFamily.UrbanistBold, fontSize: 18, color: Colors.White, marginBottom: 14, marginTop: 12},
+  settingsCard: {backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 22, borderWidth: 1, borderColor: 'rgba(255,255,255,0.04)', paddingHorizontal: 16, paddingVertical: 6, marginBottom: 28},
+  settingRow: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)'},
+  noBorder: {borderBottomWidth: 0},
+  settingLeft: {flexDirection: 'row', alignItems: 'center', gap: 12},
+  settingIconWrap: {width: 36, height: 36, borderRadius: 10, backgroundColor: 'rgba(232,73,15,0.1)', justifyContent: 'center', alignItems: 'center'},
+  settingLabel: {fontFamily: FontFamily.UrbanistMedium, fontSize: 15, color: Colors.White},
+  activeBadge: {flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(16,185,129,0.1)', paddingHorizontal: 9, paddingVertical: 5, borderRadius: 9},
+  activeBadgeText: {fontFamily: FontFamily.UrbanistBold, fontSize: 11, color: '#10B981'},
+  langToggle: {flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 10, padding: 3},
+  langBtn: {paddingHorizontal: 12, paddingVertical: 5, borderRadius: 8},
+  langBtnActive: {backgroundColor: '#E8490F'},
+  langBtnText: {fontFamily: FontFamily.UrbanistSemiBold, fontSize: 12, color: Colors.GreyText},
+  langBtnTextActive: {color: Colors.White, fontFamily: FontFamily.UrbanistBold},
+  logoutBtn: {flexDirection: 'row', height: 54, backgroundColor: 'rgba(234,67,53,0.06)', borderRadius: 16, borderWidth: 1, borderColor: 'rgba(234,67,53,0.18)', justifyContent: 'center', alignItems: 'center', gap: 10, marginBottom: 18},
+  logoutBtnText: {fontFamily: FontFamily.UrbanistBold, fontSize: 15, color: '#EA4335'},
+  versionText: {fontFamily: FontFamily.UrbanistRegular, fontSize: 12, color: Colors.Grey, textAlign: 'center', marginBottom: 16},
+  bottomSpacer: {height: 100},
+  editActionBtn: {},
+});
+
+const ms = StyleSheet.create({
+  backdrop: {flex: 1, backgroundColor: 'rgba(3,0,5,0.78)', justifyContent: 'flex-end'},
+  flex: {flex: 1},
+  sheet: {backgroundColor: '#0D0D12', borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingTop: 8, paddingBottom: Platform.OS === 'ios' ? 36 : 28, paddingHorizontal: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)'},
+  indicator: {width: 40, height: 4, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 2, alignSelf: 'center', marginBottom: 18},
+  headerRow: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 22},
+  title: {fontFamily: FontFamily.UrbanistBold, fontSize: 20, color: Colors.White},
+  closeBtn: {width: 34, height: 34, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.06)', justifyContent: 'center', alignItems: 'center'},
+  inputWrap: {marginBottom: 16},
+  inputLabel: {fontFamily: FontFamily.UrbanistMedium, fontSize: 13, color: Colors.GreyText, marginBottom: 8},
+  input: {backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)', height: 50, paddingHorizontal: 16, fontFamily: FontFamily.UrbanistMedium, fontSize: 15, color: Colors.White},
+  btnRow: {flexDirection: 'row', gap: 10, marginTop: 8},
+  cancelBtn: {flex: 1, height: 50, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.07)', justifyContent: 'center', alignItems: 'center'},
+  cancelBtnText: {fontFamily: FontFamily.UrbanistSemiBold, fontSize: 14, color: Colors.White},
+  saveBtn: {flex: 1.5, height: 50, borderRadius: 14, backgroundColor: '#E8490F', flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 7, shadowColor: '#E8490F', shadowOpacity: 0.3, shadowRadius: 12, shadowOffset: {width: 0, height: 4}, elevation: 5},
+  saveBtnText: {fontFamily: FontFamily.UrbanistBold, fontSize: 14, color: '#FFFFFF'},
 });

@@ -3,8 +3,9 @@ import {Platform, StyleSheet, Text, View} from 'react-native';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import {Colors} from '../generalStyles/colors';
 import {FontFamily} from '../generalStyles/generalFonts';
+import {Home, Compass, ClipboardList, User} from 'lucide-react-native';
 
-import Home from '../screens/main/home/home';
+import HomeScreen from '../screens/main/home/home';
 import Explore from '../screens/main/explore/Explore';
 import History from '../screens/main/history/History';
 import Profile from '../screens/main/profile/Profile';
@@ -18,29 +19,9 @@ export type BottomTabParamList = {
 
 const Tab = createBottomTabNavigator<BottomTabParamList>();
 
-/* ─── Tab Icon Renderer ─────────────────────────────────────── */
-const TabIcon = ({
-  emoji,
-  label,
-  focused,
-}: {
-  emoji: string;
-  label: string;
-  focused: boolean;
-}) => (
-  <View style={styles.tabItem}>
-    <Text style={[styles.tabIcon, focused && styles.tabIconActive]}>{emoji}</Text>
-    <Text
-      style={[
-        styles.tabLabel,
-        focused ? styles.tabLabelActive : styles.tabLabelInactive,
-      ]}>
-      {label}
-    </Text>
-  </View>
-);
+const ACTIVE = '#E8490F';
+const INACTIVE = '#4A4A55';
 
-/* ─── Bottom Tab Navigator ──────────────────────────────────── */
 const BottomTabNavigation = () => {
   return (
     <Tab.Navigator
@@ -50,42 +31,83 @@ const BottomTabNavigation = () => {
         tabBarShowLabel: false,
         tabBarHideOnKeyboard: true,
       }}>
+
       <Tab.Screen
         name="HomeTab"
-        component={Home}
+        component={HomeScreen}
         options={{
           tabBarIcon: ({focused}) => (
-            <TabIcon emoji="🏠" label="Home" focused={focused} />
+            <View style={styles.tabItem}>
+              <Home
+                size={22}
+                color={focused ? ACTIVE : INACTIVE}
+                strokeWidth={focused ? 2.2 : 1.8}
+              />
+              <Text style={[styles.tabLabel, focused ? styles.tabLabelActive : styles.tabLabelInactive]}>
+                Home
+              </Text>
+            </View>
           ),
         }}
       />
+
       <Tab.Screen
         name="ExploreTab"
         component={Explore}
         options={{
           tabBarIcon: ({focused}) => (
-            <TabIcon emoji="🔍" label="Explore" focused={focused} />
+            <View style={styles.tabItem}>
+              <Compass
+                size={22}
+                color={focused ? ACTIVE : INACTIVE}
+                strokeWidth={focused ? 2.2 : 1.8}
+              />
+              <Text style={[styles.tabLabel, focused ? styles.tabLabelActive : styles.tabLabelInactive]}>
+                Explore
+              </Text>
+            </View>
           ),
         }}
       />
+
       <Tab.Screen
         name="HistoryTab"
         component={History}
         options={{
           tabBarIcon: ({focused}) => (
-            <TabIcon emoji="📄" label="History" focused={focused} />
+            <View style={styles.tabItem}>
+              <ClipboardList
+                size={22}
+                color={focused ? ACTIVE : INACTIVE}
+                strokeWidth={focused ? 2.2 : 1.8}
+              />
+              <Text style={[styles.tabLabel, focused ? styles.tabLabelActive : styles.tabLabelInactive]}>
+                History
+              </Text>
+            </View>
           ),
         }}
       />
+
       <Tab.Screen
         name="ProfileTab"
         component={Profile}
         options={{
           tabBarIcon: ({focused}) => (
-            <TabIcon emoji="👤" label="Profile" focused={focused} />
+            <View style={styles.tabItem}>
+              <User
+                size={22}
+                color={focused ? ACTIVE : INACTIVE}
+                strokeWidth={focused ? 2.2 : 1.8}
+              />
+              <Text style={[styles.tabLabel, focused ? styles.tabLabelActive : styles.tabLabelInactive]}>
+                Profile
+              </Text>
+            </View>
           ),
         }}
       />
+
     </Tab.Navigator>
   );
 };
@@ -94,39 +116,33 @@ export default BottomTabNavigation;
 
 const styles = StyleSheet.create({
   tabBar: {
-    backgroundColor: Colors.bgColor,
-    borderTopColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: '#0A0A0F',
+    borderTopColor: 'rgba(255,255,255,0.07)',
     borderTopWidth: 1,
-    height: Platform.OS === 'ios' ? 84 : 68,
-    paddingBottom: Platform.OS === 'ios' ? 24 : 8,
+    height: Platform.OS === 'ios' ? 86 : 68,
+    paddingBottom: Platform.OS === 'ios' ? 26 : 8,
     paddingTop: 8,
-    elevation: 20,
+    elevation: 24,
     shadowColor: '#000',
-    shadowOpacity: 0.4,
-    shadowRadius: 20,
-    shadowOffset: {width: 0, height: -4},
+    shadowOpacity: 0.5,
+    shadowRadius: 24,
+    shadowOffset: {width: 0, height: -6},
   },
   tabItem: {
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
   },
-  tabIcon: {
-    fontSize: 22,
-    opacity: 0.45,
-  },
-  tabIconActive: {
-    opacity: 1,
-  },
   tabLabel: {
-    fontSize: 11,
+    fontSize: 10,
     fontFamily: FontFamily.UrbanistMedium,
+    letterSpacing: 0.2,
   },
   tabLabelActive: {
-    color: '#E8490F',
+    color: ACTIVE,
     fontFamily: FontFamily.UrbanistBold,
   },
   tabLabelInactive: {
-    color: Colors.GreyText,
+    color: INACTIVE,
   },
 });
