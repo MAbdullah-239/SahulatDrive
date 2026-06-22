@@ -1,18 +1,48 @@
 import React, {useState} from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity,
-  ScrollView, Platform, Alert, Modal, TextInput, Switch,
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  Platform,
+  Alert,
+  Modal,
+  TextInput,
+  Switch,
+  SafeAreaView,
 } from 'react-native';
 import {Colors} from '../../../generalStyles/colors';
 import {FontFamily} from '../../../generalStyles/generalFonts';
 import {
-  User, Phone, Car, Plus, Pencil, Trash2,
-  CreditCard, ShieldAlert, Star, Globe, Bell,
-  ChevronRight, LogOut, X, Check, Calendar,
+  User,
+  Phone,
+  Car,
+  Plus,
+  Pencil,
+  Trash2,
+  CreditCard,
+  ShieldAlert,
+  Star,
+  Globe,
+  Bell,
+  ChevronRight,
+  LogOut,
+  X,
+  Check,
+  Calendar,
 } from 'lucide-react-native';
+import {
+  FONT_SIZE,
+  HEIGHT_BASE_RATIO,
+  WIDTH_BASE_RATIO,
+} from '../../../utils/helpers';
 
 interface Vehicle {
-  id: string; model: string; plate: string; year: string;
+  id: string;
+  model: string;
+  plate: string;
+  year: string;
 }
 
 const initialVehicles: Vehicle[] = [
@@ -21,9 +51,27 @@ const initialVehicles: Vehicle[] = [
 ];
 
 const SETTINGS = [
-  {id: 'payments', label: 'Payment History', Icon: CreditCard, chevron: true, badge: null},
-  {id: 'sos', label: 'SOS Emergency Contacts', Icon: ShieldAlert, chevron: false, badge: 'Active'},
-  {id: 'reviews', label: 'My Ratings & Reviews', Icon: Star, chevron: true, badge: null},
+  {
+    id: 'payments',
+    label: 'Payment History',
+    Icon: CreditCard,
+    chevron: true,
+    badge: null,
+  },
+  {
+    id: 'sos',
+    label: 'SOS Emergency Contacts',
+    Icon: ShieldAlert,
+    chevron: false,
+    badge: 'Active',
+  },
+  {
+    id: 'reviews',
+    label: 'My Ratings & Reviews',
+    Icon: Star,
+    chevron: true,
+    badge: null,
+  },
 ];
 
 export const Profile: React.FC = () => {
@@ -37,23 +85,37 @@ export const Profile: React.FC = () => {
   const [language, setLanguage] = useState<'EN' | 'UR'>('EN');
 
   const openAdd = () => {
-    setEditingVehicle(null); setModel(''); setPlate(''); setYear('');
+    setEditingVehicle(null);
+    setModel('');
+    setPlate('');
+    setYear('');
     setModalOpen(true);
   };
 
   const openEdit = (v: Vehicle) => {
-    setEditingVehicle(v); setModel(v.model); setPlate(v.plate); setYear(v.year);
+    setEditingVehicle(v);
+    setModel(v.model);
+    setPlate(v.plate);
+    setYear(v.year);
     setModalOpen(true);
   };
 
   const saveVehicle = () => {
     if (!model.trim() || !plate.trim() || !year.trim()) {
-      Alert.alert('Missing Info', 'Please fill in all fields.'); return;
+      Alert.alert('Missing Info', 'Please fill in all fields.');
+      return;
     }
     if (editingVehicle) {
-      setVehicles(prev => prev.map(v => v.id === editingVehicle.id ? {...v, model, plate, year} : v));
+      setVehicles(prev =>
+        prev.map(v =>
+          v.id === editingVehicle.id ? {...v, model, plate, year} : v,
+        ),
+      );
     } else {
-      setVehicles(prev => [...prev, {id: `v_${Date.now()}`, model, plate, year}]);
+      setVehicles(prev => [
+        ...prev,
+        {id: `v_${Date.now()}`, model, plate, year},
+      ]);
     }
     setModalOpen(false);
   };
@@ -61,19 +123,28 @@ export const Profile: React.FC = () => {
   const deleteVehicle = (id: string) =>
     Alert.alert('Remove Vehicle', 'Delete this vehicle from your profile?', [
       {text: 'Cancel', style: 'cancel'},
-      {text: 'Delete', style: 'destructive', onPress: () => setVehicles(prev => prev.filter(v => v.id !== id))},
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => setVehicles(prev => prev.filter(v => v.id !== id)),
+      },
     ]);
 
   const handleLogout = () =>
-    Alert.alert('Log Out', 'Are you sure you want to sign out of Sahulat Drive?', [
-      {text: 'Cancel', style: 'cancel'},
-      {text: 'Log Out', style: 'destructive', onPress: () => {}},
-    ]);
+    Alert.alert(
+      'Log Out',
+      'Are you sure you want to sign out of Sahulat Drive?',
+      [
+        {text: 'Cancel', style: 'cancel'},
+        {text: 'Log Out', style: 'destructive', onPress: () => {}},
+      ],
+    );
 
   return (
-    <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-
+    <SafeAreaView style={styles.container}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}>
         {/* ── Profile Header ── */}
         <View style={styles.profileHeader}>
           <View style={styles.avatarWrap}>
@@ -96,7 +167,10 @@ export const Profile: React.FC = () => {
         {/* ── Saved Vehicles ── */}
         <View style={styles.sectionRow}>
           <Text style={styles.sectionTitle}>Saved Vehicles</Text>
-          <TouchableOpacity onPress={openAdd} style={styles.addBtn} activeOpacity={0.7}>
+          <TouchableOpacity
+            onPress={openAdd}
+            style={styles.addBtn}
+            activeOpacity={0.7}>
             <Plus size={15} color="#E8490F" strokeWidth={2.5} />
             <Text style={styles.addBtnText}>Add New</Text>
           </TouchableOpacity>
@@ -107,41 +181,57 @@ export const Profile: React.FC = () => {
             <Car size={28} color={Colors.GreyText} strokeWidth={1.5} />
             <Text style={styles.emptyText}>No vehicles saved yet</Text>
           </View>
-        ) : vehicles.map(v => (
-          <View key={v.id} style={styles.vehicleCard}>
-            <View style={styles.vehicleCardTop}>
-              <View style={styles.vehicleIconBox}>
-                <Car size={22} color="#E8490F" strokeWidth={2} />
-              </View>
-              <View style={styles.vehicleInfo}>
-                <Text style={styles.vehicleModel}>{v.model}</Text>
-                <View style={styles.vehicleMeta}>
-                  <Text style={styles.vehiclePlate}>{v.plate}</Text>
-                  <View style={styles.vehicleMetaDot} />
-                  <Calendar size={11} color={Colors.GreyText} strokeWidth={1.8} />
-                  <Text style={styles.vehicleYear}>{v.year}</Text>
+        ) : (
+          vehicles.map(v => (
+            <View key={v.id} style={styles.vehicleCard}>
+              <View style={styles.vehicleCardTop}>
+                <View style={styles.vehicleIconBox}>
+                  <Car size={22} color="#E8490F" strokeWidth={2} />
+                </View>
+                <View style={styles.vehicleInfo}>
+                  <Text style={styles.vehicleModel}>{v.model}</Text>
+                  <View style={styles.vehicleMeta}>
+                    <Text style={styles.vehiclePlate}>{v.plate}</Text>
+                    <View style={styles.vehicleMetaDot} />
+                    <Calendar
+                      size={11}
+                      color={Colors.GreyText}
+                      strokeWidth={1.8}
+                    />
+                    <Text style={styles.vehicleYear}>{v.year}</Text>
+                  </View>
                 </View>
               </View>
+              <View style={styles.vehicleActions}>
+                <TouchableOpacity
+                  style={styles.vehicleEditBtn}
+                  onPress={() => openEdit(v)}
+                  activeOpacity={0.7}>
+                  <Pencil size={14} color={Colors.White} strokeWidth={2} />
+                  <Text style={styles.vehicleEditBtnText}>Edit</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.vehicleDeleteBtn}
+                  onPress={() => deleteVehicle(v.id)}
+                  activeOpacity={0.7}>
+                  <Trash2 size={14} color="#EA4335" strokeWidth={2} />
+                  <Text style={styles.vehicleDeleteBtnText}>Delete</Text>
+                </TouchableOpacity>
+              </View>
             </View>
-            <View style={styles.vehicleActions}>
-              <TouchableOpacity style={styles.vehicleEditBtn} onPress={() => openEdit(v)} activeOpacity={0.7}>
-                <Pencil size={14} color={Colors.White} strokeWidth={2} />
-                <Text style={styles.vehicleEditBtnText}>Edit</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.vehicleDeleteBtn} onPress={() => deleteVehicle(v.id)} activeOpacity={0.7}>
-                <Trash2 size={14} color="#EA4335" strokeWidth={2} />
-                <Text style={styles.vehicleDeleteBtnText}>Delete</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        ))}
+          ))
+        )}
 
         {/* ── App Settings ── */}
         <Text style={styles.sectionTitleStandalone}>App Settings</Text>
         <View style={styles.settingsCard}>
           {SETTINGS.map(({id, label, Icon, chevron, badge}, i) => (
-            <TouchableOpacity key={id}
-              style={[styles.settingRow, i === SETTINGS.length - 1 && styles.noBorder]}
+            <TouchableOpacity
+              key={id}
+              style={[
+                styles.settingRow,
+                i === SETTINGS.length - 1 && styles.noBorder,
+              ]}
               activeOpacity={0.7}>
               <View style={styles.settingLeft}>
                 <View style={styles.settingIconWrap}>
@@ -155,7 +245,11 @@ export const Profile: React.FC = () => {
                   <Text style={styles.activeBadgeText}>{badge}</Text>
                 </View>
               ) : chevron ? (
-                <ChevronRight size={18} color={Colors.GreyText} strokeWidth={1.8} />
+                <ChevronRight
+                  size={18}
+                  color={Colors.GreyText}
+                  strokeWidth={1.8}
+                />
               ) : null}
             </TouchableOpacity>
           ))}
@@ -170,10 +264,18 @@ export const Profile: React.FC = () => {
             </View>
             <View style={styles.langToggle}>
               {(['EN', 'UR'] as const).map(lang => (
-                <TouchableOpacity key={lang}
-                  style={[styles.langBtn, language === lang && styles.langBtnActive]}
+                <TouchableOpacity
+                  key={lang}
+                  style={[
+                    styles.langBtn,
+                    language === lang && styles.langBtnActive,
+                  ]}
                   onPress={() => setLanguage(lang)}>
-                  <Text style={[styles.langBtnText, language === lang && styles.langBtnTextActive]}>
+                  <Text
+                    style={[
+                      styles.langBtnText,
+                      language === lang && styles.langBtnTextActive,
+                    ]}>
                     {lang === 'EN' ? 'English' : 'اردو'}
                   </Text>
                 </TouchableOpacity>
@@ -200,7 +302,10 @@ export const Profile: React.FC = () => {
         </View>
 
         {/* ── Logout ── */}
-        <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout} activeOpacity={0.85}>
+        <TouchableOpacity
+          style={styles.logoutBtn}
+          onPress={handleLogout}
+          activeOpacity={0.85}>
           <LogOut size={18} color="#EA4335" strokeWidth={2} />
           <Text style={styles.logoutBtnText}>Log Out Account</Text>
         </TouchableOpacity>
@@ -209,22 +314,52 @@ export const Profile: React.FC = () => {
       </ScrollView>
 
       {/* ── Add/Edit Vehicle Modal ── */}
-      <Modal visible={modalOpen} animationType="slide" transparent onRequestClose={() => setModalOpen(false)}>
+      <Modal
+        visible={modalOpen}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setModalOpen(false)}>
         <View style={ms.backdrop}>
-          <TouchableOpacity style={ms.flex} activeOpacity={1} onPress={() => setModalOpen(false)} />
+          <TouchableOpacity
+            style={ms.flex}
+            activeOpacity={1}
+            onPress={() => setModalOpen(false)}
+          />
           <View style={ms.sheet}>
             <View style={ms.indicator} />
             <View style={ms.headerRow}>
-              <Text style={ms.title}>{editingVehicle ? 'Edit Vehicle' : 'Add New Vehicle'}</Text>
-              <TouchableOpacity onPress={() => setModalOpen(false)} style={ms.closeBtn}>
+              <Text style={ms.title}>
+                {editingVehicle ? 'Edit Vehicle' : 'Add New Vehicle'}
+              </Text>
+              <TouchableOpacity
+                onPress={() => setModalOpen(false)}
+                style={ms.closeBtn}>
                 <X size={18} color={Colors.GreyText} strokeWidth={2} />
               </TouchableOpacity>
             </View>
 
             {[
-              {label: 'Car Model / Make', placeholder: 'e.g. Toyota Corolla', value: model, setter: setModel, caps: 'sentences' as const},
-              {label: 'License Plate', placeholder: 'e.g. LHR-4521', value: plate, setter: setPlate, caps: 'characters' as const},
-              {label: 'Year', placeholder: 'e.g. 2019', value: year, setter: setYear, caps: 'none' as const},
+              {
+                label: 'Car Model / Make',
+                placeholder: 'e.g. Toyota Corolla',
+                value: model,
+                setter: setModel,
+                caps: 'sentences' as const,
+              },
+              {
+                label: 'License Plate',
+                placeholder: 'e.g. LHR-4521',
+                value: plate,
+                setter: setPlate,
+                caps: 'characters' as const,
+              },
+              {
+                label: 'Year',
+                placeholder: 'e.g. 2019',
+                value: year,
+                setter: setYear,
+                caps: 'none' as const,
+              },
             ].map(f => (
               <View key={f.label} style={ms.inputWrap}>
                 <Text style={ms.inputLabel}>{f.label}</Text>
@@ -243,10 +378,16 @@ export const Profile: React.FC = () => {
             ))}
 
             <View style={ms.btnRow}>
-              <TouchableOpacity style={ms.cancelBtn} onPress={() => setModalOpen(false)} activeOpacity={0.7}>
+              <TouchableOpacity
+                style={ms.cancelBtn}
+                onPress={() => setModalOpen(false)}
+                activeOpacity={0.7}>
                 <Text style={ms.cancelBtnText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={ms.saveBtn} onPress={saveVehicle} activeOpacity={0.85}>
+              <TouchableOpacity
+                style={ms.saveBtn}
+                onPress={saveVehicle}
+                activeOpacity={0.85}>
                 <Check size={16} color="#FFFFFF" strokeWidth={2.5} />
                 <Text style={ms.saveBtnText}>Save Vehicle</Text>
               </TouchableOpacity>
@@ -254,79 +395,424 @@ export const Profile: React.FC = () => {
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 };
 
 export default Profile;
 
 const styles = StyleSheet.create({
-  container: {flex: 1, backgroundColor: Colors.bgColor},
-  scrollContent: {paddingHorizontal: 20, paddingTop: Platform.OS === 'android' ? 52 : 24},
-  profileHeader: {alignItems: 'center', marginBottom: 32},
-  avatarWrap: {width: 100, height: 100, borderRadius: 32, borderWidth: 2.5, borderColor: '#E8490F', justifyContent: 'center', alignItems: 'center', marginBottom: 16, backgroundColor: 'rgba(232,73,15,0.06)'},
-  avatarInner: {width: 84, height: 84, borderRadius: 27, backgroundColor: '#E8490F', justifyContent: 'center', alignItems: 'center'},
-  onlineBadge: {position: 'absolute', bottom: -2, right: -2, width: 22, height: 22, borderRadius: 11, backgroundColor: '#10B981', borderWidth: 3.5, borderColor: Colors.bgColor},
-  profileName: {fontFamily: FontFamily.UrbanistBold, fontSize: 24, color: Colors.White, marginBottom: 6},
-  phoneRow: {flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 14},
-  phoneText: {fontFamily: FontFamily.UrbanistMedium, fontSize: 14, color: Colors.GreyText},
-  editProfileBtn: {flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 16, paddingVertical: 9, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.04)'},
-  editProfileBtnText: {fontFamily: FontFamily.UrbanistSemiBold, fontSize: 13, color: Colors.White},
-  sectionRow: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14},
-  sectionTitle: {fontFamily: FontFamily.UrbanistBold, fontSize: 18, color: Colors.White},
-  addBtn: {flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, backgroundColor: 'rgba(232,73,15,0.08)', borderWidth: 1, borderColor: 'rgba(232,73,15,0.18)'},
-  addBtnText: {fontFamily: FontFamily.UrbanistBold, fontSize: 13, color: '#E8490F'},
-  emptyCard: {backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 16, padding: 24, alignItems: 'center', gap: 10, marginBottom: 28},
-  emptyText: {fontFamily: FontFamily.UrbanistRegular, fontSize: 14, color: Colors.GreyText},
-  vehicleCard: {backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.04)', padding: 16, marginBottom: 12},
-  vehicleCardTop: {flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 14},
-  vehicleIconBox: {width: 50, height: 50, borderRadius: 16, backgroundColor: 'rgba(232,73,15,0.1)', justifyContent: 'center', alignItems: 'center'},
-  vehicleInfo: {flex: 1},
-  vehicleModel: {fontFamily: FontFamily.UrbanistBold, fontSize: 16, color: Colors.White, marginBottom: 5},
-  vehicleMeta: {flexDirection: 'row', alignItems: 'center', gap: 6},
-  vehiclePlate: {fontFamily: FontFamily.UrbanistBold, fontSize: 13, color: '#E8490F', letterSpacing: 0.5},
-  vehicleMetaDot: {width: 3, height: 3, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.2)'},
-  vehicleYear: {fontFamily: FontFamily.UrbanistRegular, fontSize: 12, color: Colors.GreyText},
-  vehicleActions: {flexDirection: 'row', gap: 10, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.04)', paddingTop: 12},
-  vehicleEditBtn: {flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6, height: 38, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.06)'},
-  vehicleEditBtnText: {fontFamily: FontFamily.UrbanistSemiBold, fontSize: 13, color: Colors.White},
-  vehicleDeleteBtn: {flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6, height: 38, borderRadius: 10, backgroundColor: 'rgba(234,67,53,0.08)'},
-  vehicleDeleteBtnText: {fontFamily: FontFamily.UrbanistSemiBold, fontSize: 13, color: '#EA4335'},
-  sectionTitleStandalone: {fontFamily: FontFamily.UrbanistBold, fontSize: 18, color: Colors.White, marginBottom: 14, marginTop: 12},
-  settingsCard: {backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 22, borderWidth: 1, borderColor: 'rgba(255,255,255,0.04)', paddingHorizontal: 16, paddingVertical: 6, marginBottom: 28},
-  settingRow: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)'},
-  noBorder: {borderBottomWidth: 0},
-  settingLeft: {flexDirection: 'row', alignItems: 'center', gap: 12},
-  settingIconWrap: {width: 36, height: 36, borderRadius: 10, backgroundColor: 'rgba(232,73,15,0.1)', justifyContent: 'center', alignItems: 'center'},
-  settingLabel: {fontFamily: FontFamily.UrbanistMedium, fontSize: 15, color: Colors.White},
-  activeBadge: {flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(16,185,129,0.1)', paddingHorizontal: 9, paddingVertical: 5, borderRadius: 9},
-  activeBadgeText: {fontFamily: FontFamily.UrbanistBold, fontSize: 11, color: '#10B981'},
-  langToggle: {flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 10, padding: 3},
-  langBtn: {paddingHorizontal: 12, paddingVertical: 5, borderRadius: 8},
-  langBtnActive: {backgroundColor: '#E8490F'},
-  langBtnText: {fontFamily: FontFamily.UrbanistSemiBold, fontSize: 12, color: Colors.GreyText},
-  langBtnTextActive: {color: Colors.White, fontFamily: FontFamily.UrbanistBold},
-  logoutBtn: {flexDirection: 'row', height: 54, backgroundColor: 'rgba(234,67,53,0.06)', borderRadius: 16, borderWidth: 1, borderColor: 'rgba(234,67,53,0.18)', justifyContent: 'center', alignItems: 'center', gap: 10, marginBottom: 18},
-  logoutBtnText: {fontFamily: FontFamily.UrbanistBold, fontSize: 15, color: '#EA4335'},
-  versionText: {fontFamily: FontFamily.UrbanistRegular, fontSize: 12, color: Colors.Grey, textAlign: 'center', marginBottom: 16},
-  bottomSpacer: {height: 100},
-  editActionBtn: {},
+  container: {
+    flex: 1,
+    backgroundColor: Colors.bgColor,
+  },
+
+  scrollContent: {
+    paddingHorizontal: WIDTH_BASE_RATIO(20),
+    paddingTop:
+      Platform.OS === 'android' ? HEIGHT_BASE_RATIO(52) : HEIGHT_BASE_RATIO(24),
+  },
+
+  profileHeader: {
+    alignItems: 'center',
+    marginBottom: HEIGHT_BASE_RATIO(32),
+  },
+
+  avatarWrap: {
+    width: WIDTH_BASE_RATIO(100),
+    height: HEIGHT_BASE_RATIO(100),
+    borderRadius: WIDTH_BASE_RATIO(32),
+    borderWidth: WIDTH_BASE_RATIO(2.5),
+    borderColor: '#E8490F',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: HEIGHT_BASE_RATIO(16),
+    backgroundColor: 'rgba(232,73,15,0.06)',
+  },
+
+  avatarInner: {
+    width: WIDTH_BASE_RATIO(84),
+    height: HEIGHT_BASE_RATIO(84),
+    borderRadius: WIDTH_BASE_RATIO(27),
+    backgroundColor: '#E8490F',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  onlineBadge: {
+    position: 'absolute',
+    bottom: HEIGHT_BASE_RATIO(-2),
+    right: WIDTH_BASE_RATIO(-2),
+    width: WIDTH_BASE_RATIO(22),
+    height: HEIGHT_BASE_RATIO(22),
+    borderRadius: WIDTH_BASE_RATIO(11),
+    backgroundColor: '#10B981',
+    borderWidth: WIDTH_BASE_RATIO(3.5),
+    borderColor: Colors.bgColor,
+  },
+
+  profileName: {
+    fontFamily: FontFamily.UrbanistBold,
+    fontSize: FONT_SIZE(24),
+    color: Colors.White,
+    marginBottom: HEIGHT_BASE_RATIO(6),
+  },
+
+  phoneRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    columnGap: WIDTH_BASE_RATIO(6),
+    marginBottom: HEIGHT_BASE_RATIO(14),
+  },
+
+  phoneText: {
+    fontFamily: FontFamily.UrbanistMedium,
+    fontSize: FONT_SIZE(14),
+    color: Colors.GreyText,
+  },
+
+  editProfileBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    columnGap: WIDTH_BASE_RATIO(7),
+    paddingHorizontal: WIDTH_BASE_RATIO(16),
+    paddingVertical: HEIGHT_BASE_RATIO(9),
+    borderRadius: WIDTH_BASE_RATIO(12),
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: WIDTH_BASE_RATIO(1),
+    borderColor: 'rgba(255,255,255,0.04)',
+  },
+
+  editProfileBtnText: {
+    fontFamily: FontFamily.UrbanistSemiBold,
+    fontSize: FONT_SIZE(13),
+    color: Colors.White,
+  },
+
+  sectionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: HEIGHT_BASE_RATIO(14),
+  },
+
+  sectionTitle: {
+    fontFamily: FontFamily.UrbanistBold,
+    fontSize: FONT_SIZE(18),
+    color: Colors.White,
+  },
+
+  addBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    columnGap: WIDTH_BASE_RATIO(5),
+    paddingHorizontal: WIDTH_BASE_RATIO(12),
+    paddingVertical: HEIGHT_BASE_RATIO(6),
+    borderRadius: WIDTH_BASE_RATIO(10),
+    backgroundColor: 'rgba(232,73,15,0.08)',
+    borderWidth: WIDTH_BASE_RATIO(1),
+    borderColor: 'rgba(232,73,15,0.18)',
+  },
+
+  addBtnText: {
+    fontFamily: FontFamily.UrbanistBold,
+    fontSize: FONT_SIZE(13),
+    color: '#E8490F',
+  },
+
+  emptyCard: {
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderRadius: WIDTH_BASE_RATIO(16),
+    padding: WIDTH_BASE_RATIO(24),
+    alignItems: 'center',
+    columnGap: HEIGHT_BASE_RATIO(10),
+    marginBottom: HEIGHT_BASE_RATIO(28),
+  },
+
+  emptyText: {
+    fontFamily: FontFamily.UrbanistRegular,
+    fontSize: FONT_SIZE(14),
+    color: Colors.GreyText,
+  },
+
+  vehicleCard: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: WIDTH_BASE_RATIO(20),
+    borderWidth: WIDTH_BASE_RATIO(1),
+    borderColor: 'rgba(255,255,255,0.04)',
+    padding: WIDTH_BASE_RATIO(16),
+    marginBottom: HEIGHT_BASE_RATIO(12),
+  },
+
+  vehicleCardTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    columnGap: WIDTH_BASE_RATIO(14),
+    marginBottom: HEIGHT_BASE_RATIO(14),
+  },
+
+  vehicleIconBox: {
+    width: WIDTH_BASE_RATIO(50),
+    height: HEIGHT_BASE_RATIO(50),
+    borderRadius: WIDTH_BASE_RATIO(16),
+    backgroundColor: 'rgba(232,73,15,0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  vehicleModel: {
+    fontFamily: FontFamily.UrbanistBold,
+    fontSize: FONT_SIZE(16),
+    color: Colors.White,
+    marginBottom: HEIGHT_BASE_RATIO(5),
+  },
+
+  vehicleMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    columnGap: WIDTH_BASE_RATIO(6),
+  },
+
+  vehiclePlate: {
+    fontFamily: FontFamily.UrbanistBold,
+    fontSize: FONT_SIZE(13),
+    color: '#E8490F',
+    letterSpacing: 0.5,
+  },
+
+  vehicleYear: {
+    fontFamily: FontFamily.UrbanistRegular,
+    fontSize: FONT_SIZE(12),
+    color: Colors.GreyText,
+  },
+
+  vehicleActions: {
+    flexDirection: 'row',
+    columnGap: WIDTH_BASE_RATIO(10),
+    borderTopWidth: WIDTH_BASE_RATIO(1),
+    borderTopColor: 'rgba(255,255,255,0.04)',
+    paddingTop: HEIGHT_BASE_RATIO(12),
+  },
+
+  vehicleEditBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    columnGap: WIDTH_BASE_RATIO(6),
+    height: HEIGHT_BASE_RATIO(38),
+    borderRadius: WIDTH_BASE_RATIO(10),
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+
+  vehicleDeleteBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    columnGap: WIDTH_BASE_RATIO(6),
+    height: HEIGHT_BASE_RATIO(38),
+    borderRadius: WIDTH_BASE_RATIO(10),
+    backgroundColor: 'rgba(234,67,53,0.08)',
+  },
+
+  sectionTitleStandalone: {
+    fontFamily: FontFamily.UrbanistBold,
+    fontSize: FONT_SIZE(18),
+    color: Colors.White,
+    marginBottom: HEIGHT_BASE_RATIO(14),
+    marginTop: HEIGHT_BASE_RATIO(12),
+  },
+
+  settingsCard: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: WIDTH_BASE_RATIO(22),
+    borderWidth: WIDTH_BASE_RATIO(1),
+    borderColor: 'rgba(255,255,255,0.04)',
+    paddingHorizontal: WIDTH_BASE_RATIO(16),
+    paddingVertical: HEIGHT_BASE_RATIO(6),
+    marginBottom: HEIGHT_BASE_RATIO(28),
+  },
+
+  settingRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: HEIGHT_BASE_RATIO(14),
+    borderBottomWidth: WIDTH_BASE_RATIO(1),
+    borderBottomColor: 'rgba(255,255,255,0.05)',
+  },
+
+  settingLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    columnGap: WIDTH_BASE_RATIO(12),
+  },
+
+  settingIconWrap: {
+    width: WIDTH_BASE_RATIO(36),
+    height: HEIGHT_BASE_RATIO(36),
+    borderRadius: WIDTH_BASE_RATIO(10),
+    backgroundColor: 'rgba(232,73,15,0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  settingLabel: {
+    fontFamily: FontFamily.UrbanistMedium,
+    fontSize: FONT_SIZE(15),
+    color: Colors.White,
+  },
+
+  logoutBtn: {
+    flexDirection: 'row',
+    height: HEIGHT_BASE_RATIO(54),
+    backgroundColor: 'rgba(234,67,53,0.06)',
+    borderRadius: WIDTH_BASE_RATIO(16),
+    borderWidth: WIDTH_BASE_RATIO(1),
+    borderColor: 'rgba(234,67,53,0.18)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    columnGap: WIDTH_BASE_RATIO(10),
+    marginBottom: HEIGHT_BASE_RATIO(18),
+  },
+
+  logoutBtnText: {
+    fontFamily: FontFamily.UrbanistBold,
+    fontSize: FONT_SIZE(15),
+    color: '#EA4335',
+  },
+
+  versionText: {
+    fontFamily: FontFamily.UrbanistRegular,
+    fontSize: FONT_SIZE(12),
+    color: Colors.Grey,
+    textAlign: 'center',
+    marginBottom: HEIGHT_BASE_RATIO(16),
+  },
+
+  bottomSpacer: {
+    height: HEIGHT_BASE_RATIO(100),
+  },
 });
 
 const ms = StyleSheet.create({
-  backdrop: {flex: 1, backgroundColor: 'rgba(3,0,5,0.78)', justifyContent: 'flex-end'},
-  flex: {flex: 1},
-  sheet: {backgroundColor: '#0D0D12', borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingTop: 8, paddingBottom: Platform.OS === 'ios' ? 36 : 28, paddingHorizontal: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)'},
-  indicator: {width: 40, height: 4, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 2, alignSelf: 'center', marginBottom: 18},
-  headerRow: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 22},
-  title: {fontFamily: FontFamily.UrbanistBold, fontSize: 20, color: Colors.White},
-  closeBtn: {width: 34, height: 34, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.06)', justifyContent: 'center', alignItems: 'center'},
-  inputWrap: {marginBottom: 16},
-  inputLabel: {fontFamily: FontFamily.UrbanistMedium, fontSize: 13, color: Colors.GreyText, marginBottom: 8},
-  input: {backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)', height: 50, paddingHorizontal: 16, fontFamily: FontFamily.UrbanistMedium, fontSize: 15, color: Colors.White},
-  btnRow: {flexDirection: 'row', gap: 10, marginTop: 8},
-  cancelBtn: {flex: 1, height: 50, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.07)', justifyContent: 'center', alignItems: 'center'},
-  cancelBtnText: {fontFamily: FontFamily.UrbanistSemiBold, fontSize: 14, color: Colors.White},
-  saveBtn: {flex: 1.5, height: 50, borderRadius: 14, backgroundColor: '#E8490F', flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 7, shadowColor: '#E8490F', shadowOpacity: 0.3, shadowRadius: 12, shadowOffset: {width: 0, height: 4}, elevation: 5},
-  saveBtnText: {fontFamily: FontFamily.UrbanistBold, fontSize: 14, color: '#FFFFFF'},
+  backdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(3,0,5,0.78)',
+    justifyContent: 'flex-end',
+  },
+
+  flex: {
+    flex: 1,
+  },
+
+  sheet: {
+    backgroundColor: '#0D0D12',
+    borderTopLeftRadius: WIDTH_BASE_RATIO(28),
+    borderTopRightRadius: WIDTH_BASE_RATIO(28),
+    paddingTop: HEIGHT_BASE_RATIO(8),
+    paddingBottom:
+      Platform.OS === 'ios' ? HEIGHT_BASE_RATIO(36) : HEIGHT_BASE_RATIO(28),
+    paddingHorizontal: WIDTH_BASE_RATIO(20),
+    borderWidth: WIDTH_BASE_RATIO(1),
+    borderColor: 'rgba(255,255,255,0.06)',
+  },
+
+  indicator: {
+    width: WIDTH_BASE_RATIO(40),
+    height: HEIGHT_BASE_RATIO(4),
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: WIDTH_BASE_RATIO(2),
+    alignSelf: 'center',
+    marginBottom: HEIGHT_BASE_RATIO(18),
+  },
+
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: HEIGHT_BASE_RATIO(22),
+  },
+
+  title: {
+    fontFamily: FontFamily.UrbanistBold,
+    fontSize: FONT_SIZE(20),
+    color: Colors.White,
+  },
+
+  closeBtn: {
+    width: WIDTH_BASE_RATIO(34),
+    height: HEIGHT_BASE_RATIO(34),
+    borderRadius: WIDTH_BASE_RATIO(10),
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  inputWrap: {
+    marginBottom: HEIGHT_BASE_RATIO(16),
+  },
+
+  inputLabel: {
+    fontFamily: FontFamily.UrbanistMedium,
+    fontSize: FONT_SIZE(13),
+    color: Colors.GreyText,
+    marginBottom: HEIGHT_BASE_RATIO(8),
+  },
+
+  input: {
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderRadius: WIDTH_BASE_RATIO(14),
+    borderWidth: WIDTH_BASE_RATIO(1),
+    borderColor: 'rgba(255,255,255,0.05)',
+    height: HEIGHT_BASE_RATIO(50),
+    paddingHorizontal: WIDTH_BASE_RATIO(16),
+    fontFamily: FontFamily.UrbanistMedium,
+    fontSize: FONT_SIZE(15),
+    color: Colors.White,
+  },
+
+  btnRow: {
+    flexDirection: 'row',
+    columnGap: WIDTH_BASE_RATIO(10),
+    marginTop: HEIGHT_BASE_RATIO(8),
+  },
+
+  cancelBtn: {
+    flex: 1,
+    height: HEIGHT_BASE_RATIO(50),
+    borderRadius: WIDTH_BASE_RATIO(14),
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  cancelBtnText: {
+    fontFamily: FontFamily.UrbanistSemiBold,
+    fontSize: FONT_SIZE(14),
+    color: Colors.White,
+  },
+
+  saveBtn: {
+    flex: 1.5,
+    height: HEIGHT_BASE_RATIO(50),
+    borderRadius: WIDTH_BASE_RATIO(14),
+    backgroundColor: '#E8490F',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    columnGap: WIDTH_BASE_RATIO(7),
+    shadowColor: '#E8490F',
+    shadowOpacity: 0.3,
+    shadowRadius: WIDTH_BASE_RATIO(12),
+    shadowOffset: {width: 0, height: HEIGHT_BASE_RATIO(4)},
+    elevation: 5,
+  },
+
+  saveBtnText: {
+    fontFamily: FontFamily.UrbanistBold,
+    fontSize: FONT_SIZE(14),
+    color: '#FFFFFF',
+  },
 });

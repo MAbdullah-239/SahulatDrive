@@ -53,6 +53,11 @@ export const Fonts = {
     fontSize: FONT_SIZE(12),
     color: Colors.Grey,
   },
+  Urbanist_Regular_12_White: {
+    fontFamily: FontFamily.UrbanistRegular,
+    fontSize: FONT_SIZE(12),
+    color: Colors.White,
+  },
   Urbanist_Bold_16_Black: {
     fontFamily: FontFamily.UrbanistBold,
     fontSize: FONT_SIZE(16),

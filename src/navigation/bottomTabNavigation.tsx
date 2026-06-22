@@ -9,6 +9,8 @@ import HomeScreen from '../screens/main/home/home';
 import Explore from '../screens/main/explore/Explore';
 import History from '../screens/main/history/History';
 import Profile from '../screens/main/profile/Profile';
+import {FONT_SIZE, HEIGHT_BASE_RATIO, WIDTH_BASE_RATIO} from '../utils/helpers';
+import {Fonts} from '../generalStyles/fontStyles';
 
 export type BottomTabParamList = {
   HomeTab: undefined;
@@ -20,7 +22,7 @@ export type BottomTabParamList = {
 const Tab = createBottomTabNavigator<BottomTabParamList>();
 
 const ACTIVE = '#E8490F';
-const INACTIVE = '#4A4A55';
+const INACTIVE = '#FFFFFF';
 
 const BottomTabNavigation = () => {
   return (
@@ -31,7 +33,6 @@ const BottomTabNavigation = () => {
         tabBarShowLabel: false,
         tabBarHideOnKeyboard: true,
       }}>
-
       <Tab.Screen
         name="HomeTab"
         component={HomeScreen}
@@ -43,7 +44,11 @@ const BottomTabNavigation = () => {
                 color={focused ? ACTIVE : INACTIVE}
                 strokeWidth={focused ? 2.2 : 1.8}
               />
-              <Text style={[styles.tabLabel, focused ? styles.tabLabelActive : styles.tabLabelInactive]}>
+              <Text
+                style={[
+                  styles.tabLabel,
+                  focused ? styles.tabLabelActive : styles.tabLabelInactive,
+                ]}>
                 Home
               </Text>
             </View>
@@ -62,7 +67,11 @@ const BottomTabNavigation = () => {
                 color={focused ? ACTIVE : INACTIVE}
                 strokeWidth={focused ? 2.2 : 1.8}
               />
-              <Text style={[styles.tabLabel, focused ? styles.tabLabelActive : styles.tabLabelInactive]}>
+              <Text
+                style={[
+                  styles.tabLabel,
+                  focused ? styles.tabLabelActive : styles.tabLabelInactive,
+                ]}>
                 Explore
               </Text>
             </View>
@@ -81,7 +90,11 @@ const BottomTabNavigation = () => {
                 color={focused ? ACTIVE : INACTIVE}
                 strokeWidth={focused ? 2.2 : 1.8}
               />
-              <Text style={[styles.tabLabel, focused ? styles.tabLabelActive : styles.tabLabelInactive]}>
+              <Text
+                style={[
+                  styles.tabLabel,
+                  focused ? styles.tabLabelActive : styles.tabLabelInactive,
+                ]}>
                 History
               </Text>
             </View>
@@ -100,14 +113,17 @@ const BottomTabNavigation = () => {
                 color={focused ? ACTIVE : INACTIVE}
                 strokeWidth={focused ? 2.2 : 1.8}
               />
-              <Text style={[styles.tabLabel, focused ? styles.tabLabelActive : styles.tabLabelInactive]}>
+              <Text
+                style={[
+                  styles.tabLabel,
+                  focused ? styles.tabLabelActive : styles.tabLabelInactive,
+                ]}>
                 Profile
               </Text>
             </View>
           ),
         }}
       />
-
     </Tab.Navigator>
   );
 };
@@ -119,29 +135,34 @@ const styles = StyleSheet.create({
     backgroundColor: '#0A0A0F',
     borderTopColor: 'rgba(255,255,255,0.07)',
     borderTopWidth: 1,
-    height: Platform.OS === 'ios' ? 86 : 68,
-    paddingBottom: Platform.OS === 'ios' ? 26 : 8,
-    paddingTop: 8,
+
+    height: HEIGHT_BASE_RATIO(100),
+    // paddingBottom: HEIGHT_BASE_RATIO(8),
+    paddingTop: HEIGHT_BASE_RATIO(30),
+
     elevation: 24,
     shadowColor: '#000',
     shadowOpacity: 0.5,
     shadowRadius: 24,
     shadowOffset: {width: 0, height: -6},
   },
+
   tabItem: {
+    width: WIDTH_BASE_RATIO(70),
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
+    gap: WIDTH_BASE_RATIO(4),
   },
+
   tabLabel: {
-    fontSize: 10,
-    fontFamily: FontFamily.UrbanistMedium,
-    letterSpacing: 0.2,
+    ...Fonts.Urbanist_Regular_12_White,
   },
+
   tabLabelActive: {
     color: ACTIVE,
     fontFamily: FontFamily.UrbanistBold,
   },
+
   tabLabelInactive: {
     color: INACTIVE,
   },
