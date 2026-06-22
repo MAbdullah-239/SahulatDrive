@@ -139,25 +139,7 @@ const Home: React.FC<HomeProps> = () => {
             </TouchableOpacity>
           </View>
 
-          {/* Mock Bottom Navigation Bar */}
-          <View style={styles.bottomNavBar}>
-            <TouchableOpacity style={styles.navItem} activeOpacity={0.7}>
-              <Text style={[styles.navIcon, styles.navIconActive]}>🏠</Text>
-              <Text style={[styles.navText, styles.navTextActive]}>Home</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.navItem} activeOpacity={0.7}>
-              <Text style={styles.navIcon}>🔍</Text>
-              <Text style={styles.navText}>Explore</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.navItem} activeOpacity={0.7}>
-              <Text style={styles.navIcon}>📄</Text>
-              <Text style={styles.navText}>History</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.navItem} activeOpacity={0.7}>
-              <Text style={styles.navIcon}>👤</Text>
-              <Text style={styles.navText}>Profile</Text>
-            </TouchableOpacity>
-          </View>
+          {/* Bottom navigation is now handled by BottomTabNavigation */}
 
         </View>
       </SafeAreaView>
@@ -376,38 +358,6 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.UrbanistSemiBold,
     fontSize: 14,
     color: '#E8490F',
-  },
-
-  /* Mock Bottom Navigation Bar */
-  bottomNavBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    backgroundColor: 'transparent',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.08)',
-    paddingTop: 16,
-    // Provide a dark background glow if needed, or keep transparent
-  },
-  navItem: {
-    alignItems: 'center',
-    flex: 1,
-    gap: 6,
-  },
-  navIcon: {
-    fontSize: 20,
-    opacity: 0.5,
-  },
-  navIconActive: {
-    opacity: 1,
-  },
-  navText: {
-    fontFamily: FontFamily.UrbanistMedium,
-    fontSize: 12,
-    color: Colors.BlackText,
-  },
-  navTextActive: {
-    color: '#E8490F',
-    fontFamily: FontFamily.UrbanistBold,
   },
 });
 

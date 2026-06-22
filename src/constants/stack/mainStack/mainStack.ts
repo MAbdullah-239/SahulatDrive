@@ -1,8 +1,8 @@
 export const MainStack = {
   name: 'MainStack',
   nestedScreens: {
-    Home: {
-      name: 'Home' as const,
+    MainTabs: {
+      name: 'MainTabs' as const,
     },
     RequestHelp: {
       name: 'RequestHelp' as const,

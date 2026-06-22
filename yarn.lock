@@ -1988,6 +1988,22 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@react-navigation/bottom-tabs@npm:7.3.15":
+  version: 7.3.15
+  resolution: "@react-navigation/bottom-tabs@npm:7.3.15"
+  dependencies:
+    "@react-navigation/elements": "npm:^2.4.4"
+    color: "npm:^4.2.3"
+  peerDependencies:
+    "@react-navigation/native": ^7.1.11
+    react: ">= 18.2.0"
+    react-native: "*"
+    react-native-safe-area-context: ">= 4.0.0"
+    react-native-screens: ">= 4.0.0"
+  checksum: 10c0/8ef5db373182f119af9e4318546755d85967c2c48b75e14db47237aa448a22ac80c90904c7f8ce256a8e461c50574436fe3123f5e1b7cf52a1f6a767887f8e06
+  languageName: node
+  linkType: hard
+
 "@react-navigation/core@npm:^7.13.0":
   version: 7.17.2
   resolution: "@react-navigation/core@npm:7.17.2"
@@ -2003,6 +2019,26 @@ __metadata:
   peerDependencies:
     react: ">= 18.2.0"
   checksum: 10c0/df1889769e90f85b71605070818b22bd9967f5fd0572187d31e6a17386339336c8890b9c7ba505854382426cb3b5be8d03ea4684da4ad5be2cdae828302b98a0
+  languageName: node
+  linkType: hard
+
+"@react-navigation/elements@npm:^2.4.4":
+  version: 2.9.25
+  resolution: "@react-navigation/elements@npm:2.9.25"
+  dependencies:
+    color: "npm:^4.2.3"
+    use-latest-callback: "npm:^0.2.4"
+    use-sync-external-store: "npm:^1.5.0"
+  peerDependencies:
+    "@react-native-masked-view/masked-view": ">= 0.2.0"
+    "@react-navigation/native": ^7.3.3
+    react: ">= 18.2.0"
+    react-native: "*"
+    react-native-safe-area-context: ">= 4.0.0"
+  peerDependenciesMeta:
+    "@react-native-masked-view/masked-view":
+      optional: true
+  checksum: 10c0/524f930bde38470b05000bcedd39138b99734b52874489f0d9aaa512227a855b5f00a4e91452938770007bec1f4bc33665a1796fbe530bfdb9e0ff69202303bc
   languageName: node
   linkType: hard
 
@@ -2690,6 +2726,7 @@ __metadata:
     "@react-native/eslint-config": "npm:0.79.0"
     "@react-native/metro-config": "npm:0.79.0"
     "@react-native/typescript-config": "npm:0.79.0"
+    "@react-navigation/bottom-tabs": "npm:7.3.15"
     "@react-navigation/native": "npm:7.1.19"
     "@react-navigation/native-stack": "npm:7.6.2"
     "@reduxjs/toolkit": "npm:2.10.1"
