@@ -75,6 +75,8 @@ const SETTINGS = [
 ];
 
 export const Profile: React.FC = () => {
+  const [name, setName] = useState('Ahmed Raza');
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [vehicles, setVehicles] = useState<Vehicle[]>(initialVehicles);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
@@ -153,12 +155,27 @@ export const Profile: React.FC = () => {
             </View>
             <View style={styles.onlineBadge} />
           </View>
-          <Text style={styles.profileName}>Ahmed Raza</Text>
+          {isEditingProfile ? (
+            <TextInput
+              value={name}
+              onChangeText={setName}
+              style={styles.profileInput}
+              autoFocus
+              placeholder="Enter name"
+              placeholderTextColor={Colors.GreyText}
+            />
+          ) : (
+            <Text style={styles.profileName}>{name}</Text>
+          )}{' '}
           <View style={styles.phoneRow}>
             <Phone size={13} color={Colors.GreyText} strokeWidth={1.8} />
             <Text style={styles.phoneText}>+92 300 1234567</Text>
           </View>
-          <TouchableOpacity style={styles.editProfileBtn} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={styles.editProfileBtn}
+            activeOpacity={0.7}
+            onPress={() => setIsEditingProfile(true)}>
+            {' '}
             <Pencil size={13} color={Colors.White} strokeWidth={2} />
             <Text style={styles.editProfileBtnText}>Edit Profile</Text>
           </TouchableOpacity>
@@ -402,298 +419,302 @@ export const Profile: React.FC = () => {
 export default Profile;
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.bgColor,
-  },
-
+  container: {flex: 1, backgroundColor: Colors.bgColor},
   scrollContent: {
-    paddingHorizontal: WIDTH_BASE_RATIO(20),
-    paddingTop:
-      Platform.OS === 'android' ? HEIGHT_BASE_RATIO(52) : HEIGHT_BASE_RATIO(24),
+    paddingHorizontal: 20,
+    paddingTop: Platform.OS === 'android' ? 52 : 24,
   },
-
-  profileHeader: {
-    alignItems: 'center',
-    marginBottom: HEIGHT_BASE_RATIO(32),
-  },
-
+  profileHeader: {alignItems: 'center', marginBottom: 32},
   avatarWrap: {
-    width: WIDTH_BASE_RATIO(100),
-    height: HEIGHT_BASE_RATIO(100),
-    borderRadius: WIDTH_BASE_RATIO(32),
-    borderWidth: WIDTH_BASE_RATIO(2.5),
+    width: 100,
+    height: 100,
+    borderRadius: 32,
+    borderWidth: 2.5,
     borderColor: '#E8490F',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: HEIGHT_BASE_RATIO(16),
+    marginBottom: 16,
     backgroundColor: 'rgba(232,73,15,0.06)',
   },
-
   avatarInner: {
-    width: WIDTH_BASE_RATIO(84),
-    height: HEIGHT_BASE_RATIO(84),
-    borderRadius: WIDTH_BASE_RATIO(27),
+    width: 84,
+    height: 84,
+    borderRadius: 27,
     backgroundColor: '#E8490F',
     justifyContent: 'center',
     alignItems: 'center',
   },
-
   onlineBadge: {
     position: 'absolute',
-    bottom: HEIGHT_BASE_RATIO(-2),
-    right: WIDTH_BASE_RATIO(-2),
-    width: WIDTH_BASE_RATIO(22),
-    height: HEIGHT_BASE_RATIO(22),
-    borderRadius: WIDTH_BASE_RATIO(11),
+    bottom: -2,
+    right: -2,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     backgroundColor: '#10B981',
-    borderWidth: WIDTH_BASE_RATIO(3.5),
+    borderWidth: 3.5,
     borderColor: Colors.bgColor,
   },
-
   profileName: {
+    fontFamily: FontFamily.UrbanistBold,
+    fontSize: 24,
+    color: Colors.White,
+    marginBottom: 6,
+  },
+  profileInput: {
     fontFamily: FontFamily.UrbanistBold,
     fontSize: FONT_SIZE(24),
     color: Colors.White,
+    textAlign: 'center',
+    borderBottomWidth: WIDTH_BASE_RATIO(1),
+    borderBottomColor: '#E8490F',
+    minWidth: WIDTH_BASE_RATIO(160),
     marginBottom: HEIGHT_BASE_RATIO(6),
   },
-
   phoneRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    columnGap: WIDTH_BASE_RATIO(6),
-    marginBottom: HEIGHT_BASE_RATIO(14),
+    gap: 6,
+    marginBottom: 14,
   },
-
   phoneText: {
     fontFamily: FontFamily.UrbanistMedium,
-    fontSize: FONT_SIZE(14),
+    fontSize: 14,
     color: Colors.GreyText,
   },
-
   editProfileBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    columnGap: WIDTH_BASE_RATIO(7),
-    paddingHorizontal: WIDTH_BASE_RATIO(16),
-    paddingVertical: HEIGHT_BASE_RATIO(9),
-    borderRadius: WIDTH_BASE_RATIO(12),
+    gap: 7,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    borderRadius: 12,
     backgroundColor: 'rgba(255,255,255,0.06)',
-    borderWidth: WIDTH_BASE_RATIO(1),
+    borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.04)',
   },
-
   editProfileBtnText: {
     fontFamily: FontFamily.UrbanistSemiBold,
-    fontSize: FONT_SIZE(13),
+    fontSize: 13,
     color: Colors.White,
   },
-
   sectionRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: HEIGHT_BASE_RATIO(14),
+    marginBottom: 14,
   },
-
   sectionTitle: {
     fontFamily: FontFamily.UrbanistBold,
-    fontSize: FONT_SIZE(18),
+    fontSize: 18,
     color: Colors.White,
   },
-
   addBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    columnGap: WIDTH_BASE_RATIO(5),
-    paddingHorizontal: WIDTH_BASE_RATIO(12),
-    paddingVertical: HEIGHT_BASE_RATIO(6),
-    borderRadius: WIDTH_BASE_RATIO(10),
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 10,
     backgroundColor: 'rgba(232,73,15,0.08)',
-    borderWidth: WIDTH_BASE_RATIO(1),
+    borderWidth: 1,
     borderColor: 'rgba(232,73,15,0.18)',
   },
-
   addBtnText: {
     fontFamily: FontFamily.UrbanistBold,
-    fontSize: FONT_SIZE(13),
+    fontSize: 13,
     color: '#E8490F',
   },
-
   emptyCard: {
     backgroundColor: 'rgba(255,255,255,0.03)',
-    borderRadius: WIDTH_BASE_RATIO(16),
-    padding: WIDTH_BASE_RATIO(24),
+    borderRadius: 16,
+    padding: 24,
     alignItems: 'center',
-    columnGap: HEIGHT_BASE_RATIO(10),
-    marginBottom: HEIGHT_BASE_RATIO(28),
+    gap: 10,
+    marginBottom: 28,
   },
-
   emptyText: {
     fontFamily: FontFamily.UrbanistRegular,
-    fontSize: FONT_SIZE(14),
+    fontSize: 14,
     color: Colors.GreyText,
   },
-
   vehicleCard: {
     backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: WIDTH_BASE_RATIO(20),
-    borderWidth: WIDTH_BASE_RATIO(1),
+    borderRadius: 20,
+    borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.04)',
-    padding: WIDTH_BASE_RATIO(16),
-    marginBottom: HEIGHT_BASE_RATIO(12),
+    padding: 16,
+    marginBottom: 12,
   },
-
   vehicleCardTop: {
     flexDirection: 'row',
     alignItems: 'center',
-    columnGap: WIDTH_BASE_RATIO(14),
-    marginBottom: HEIGHT_BASE_RATIO(14),
+    gap: 14,
+    marginBottom: 14,
   },
-
   vehicleIconBox: {
-    width: WIDTH_BASE_RATIO(50),
-    height: HEIGHT_BASE_RATIO(50),
-    borderRadius: WIDTH_BASE_RATIO(16),
+    width: 50,
+    height: 50,
+    borderRadius: 16,
     backgroundColor: 'rgba(232,73,15,0.1)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-
+  vehicleInfo: {flex: 1},
   vehicleModel: {
     fontFamily: FontFamily.UrbanistBold,
-    fontSize: FONT_SIZE(16),
+    fontSize: 16,
     color: Colors.White,
-    marginBottom: HEIGHT_BASE_RATIO(5),
+    marginBottom: 5,
   },
-
-  vehicleMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    columnGap: WIDTH_BASE_RATIO(6),
-  },
-
+  vehicleMeta: {flexDirection: 'row', alignItems: 'center', gap: 6},
   vehiclePlate: {
     fontFamily: FontFamily.UrbanistBold,
-    fontSize: FONT_SIZE(13),
+    fontSize: 13,
     color: '#E8490F',
     letterSpacing: 0.5,
   },
-
+  vehicleMetaDot: {
+    width: 3,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
   vehicleYear: {
     fontFamily: FontFamily.UrbanistRegular,
-    fontSize: FONT_SIZE(12),
+    fontSize: 12,
     color: Colors.GreyText,
   },
-
   vehicleActions: {
     flexDirection: 'row',
-    columnGap: WIDTH_BASE_RATIO(10),
-    borderTopWidth: WIDTH_BASE_RATIO(1),
+    gap: 10,
+    borderTopWidth: 1,
     borderTopColor: 'rgba(255,255,255,0.04)',
-    paddingTop: HEIGHT_BASE_RATIO(12),
+    paddingTop: 12,
   },
-
   vehicleEditBtn: {
     flex: 1,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    columnGap: WIDTH_BASE_RATIO(6),
-    height: HEIGHT_BASE_RATIO(38),
-    borderRadius: WIDTH_BASE_RATIO(10),
+    gap: 6,
+    height: 38,
+    borderRadius: 10,
     backgroundColor: 'rgba(255,255,255,0.06)',
   },
-
+  vehicleEditBtnText: {
+    fontFamily: FontFamily.UrbanistSemiBold,
+    fontSize: 13,
+    color: Colors.White,
+  },
   vehicleDeleteBtn: {
     flex: 1,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    columnGap: WIDTH_BASE_RATIO(6),
-    height: HEIGHT_BASE_RATIO(38),
-    borderRadius: WIDTH_BASE_RATIO(10),
+    gap: 6,
+    height: 38,
+    borderRadius: 10,
     backgroundColor: 'rgba(234,67,53,0.08)',
   },
-
+  vehicleDeleteBtnText: {
+    fontFamily: FontFamily.UrbanistSemiBold,
+    fontSize: 13,
+    color: '#EA4335',
+  },
   sectionTitleStandalone: {
     fontFamily: FontFamily.UrbanistBold,
-    fontSize: FONT_SIZE(18),
+    fontSize: 18,
     color: Colors.White,
-    marginBottom: HEIGHT_BASE_RATIO(14),
-    marginTop: HEIGHT_BASE_RATIO(12),
+    marginBottom: 14,
+    marginTop: 12,
   },
-
   settingsCard: {
     backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: WIDTH_BASE_RATIO(22),
-    borderWidth: WIDTH_BASE_RATIO(1),
+    borderRadius: 22,
+    borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.04)',
-    paddingHorizontal: WIDTH_BASE_RATIO(16),
-    paddingVertical: HEIGHT_BASE_RATIO(6),
-    marginBottom: HEIGHT_BASE_RATIO(28),
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    marginBottom: 28,
   },
-
   settingRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: HEIGHT_BASE_RATIO(14),
-    borderBottomWidth: WIDTH_BASE_RATIO(1),
+    paddingVertical: 14,
+    borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.05)',
   },
-
-  settingLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    columnGap: WIDTH_BASE_RATIO(12),
-  },
-
+  noBorder: {borderBottomWidth: 0},
+  settingLeft: {flexDirection: 'row', alignItems: 'center', gap: 12},
   settingIconWrap: {
-    width: WIDTH_BASE_RATIO(36),
-    height: HEIGHT_BASE_RATIO(36),
-    borderRadius: WIDTH_BASE_RATIO(10),
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     backgroundColor: 'rgba(232,73,15,0.1)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-
   settingLabel: {
     fontFamily: FontFamily.UrbanistMedium,
-    fontSize: FONT_SIZE(15),
+    fontSize: 15,
     color: Colors.White,
   },
-
+  activeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(16,185,129,0.1)',
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 9,
+  },
+  activeBadgeText: {
+    fontFamily: FontFamily.UrbanistBold,
+    fontSize: 11,
+    color: '#10B981',
+  },
+  langToggle: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 10,
+    padding: 3,
+  },
+  langBtn: {paddingHorizontal: 12, paddingVertical: 5, borderRadius: 8},
+  langBtnActive: {backgroundColor: '#E8490F'},
+  langBtnText: {
+    fontFamily: FontFamily.UrbanistSemiBold,
+    fontSize: 12,
+    color: Colors.GreyText,
+  },
+  langBtnTextActive: {color: Colors.White, fontFamily: FontFamily.UrbanistBold},
   logoutBtn: {
     flexDirection: 'row',
-    height: HEIGHT_BASE_RATIO(54),
+    height: 54,
     backgroundColor: 'rgba(234,67,53,0.06)',
-    borderRadius: WIDTH_BASE_RATIO(16),
-    borderWidth: WIDTH_BASE_RATIO(1),
+    borderRadius: 16,
+    borderWidth: 1,
     borderColor: 'rgba(234,67,53,0.18)',
     justifyContent: 'center',
     alignItems: 'center',
-    columnGap: WIDTH_BASE_RATIO(10),
-    marginBottom: HEIGHT_BASE_RATIO(18),
+    gap: 10,
+    marginBottom: 18,
   },
-
   logoutBtnText: {
     fontFamily: FontFamily.UrbanistBold,
-    fontSize: FONT_SIZE(15),
+    fontSize: 15,
     color: '#EA4335',
   },
-
   versionText: {
     fontFamily: FontFamily.UrbanistRegular,
-    fontSize: FONT_SIZE(12),
+    fontSize: 12,
     color: Colors.Grey,
     textAlign: 'center',
-    marginBottom: HEIGHT_BASE_RATIO(16),
+    marginBottom: 16,
   },
-
-  bottomSpacer: {
-    height: HEIGHT_BASE_RATIO(100),
-  },
+  bottomSpacer: {height: 100},
+  editActionBtn: {},
 });
 
 const ms = StyleSheet.create({
@@ -702,117 +723,94 @@ const ms = StyleSheet.create({
     backgroundColor: 'rgba(3,0,5,0.78)',
     justifyContent: 'flex-end',
   },
-
-  flex: {
-    flex: 1,
-  },
-
+  flex: {flex: 1},
   sheet: {
     backgroundColor: '#0D0D12',
-    borderTopLeftRadius: WIDTH_BASE_RATIO(28),
-    borderTopRightRadius: WIDTH_BASE_RATIO(28),
-    paddingTop: HEIGHT_BASE_RATIO(8),
-    paddingBottom:
-      Platform.OS === 'ios' ? HEIGHT_BASE_RATIO(36) : HEIGHT_BASE_RATIO(28),
-    paddingHorizontal: WIDTH_BASE_RATIO(20),
-    borderWidth: WIDTH_BASE_RATIO(1),
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingTop: 8,
+    paddingBottom: Platform.OS === 'ios' ? 36 : 28,
+    paddingHorizontal: 20,
+    borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.06)',
   },
-
   indicator: {
-    width: WIDTH_BASE_RATIO(40),
-    height: HEIGHT_BASE_RATIO(4),
+    width: 40,
+    height: 4,
     backgroundColor: 'rgba(255,255,255,0.15)',
-    borderRadius: WIDTH_BASE_RATIO(2),
+    borderRadius: 2,
     alignSelf: 'center',
-    marginBottom: HEIGHT_BASE_RATIO(18),
+    marginBottom: 18,
   },
-
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: HEIGHT_BASE_RATIO(22),
+    marginBottom: 22,
   },
-
   title: {
     fontFamily: FontFamily.UrbanistBold,
-    fontSize: FONT_SIZE(20),
+    fontSize: 20,
     color: Colors.White,
   },
-
   closeBtn: {
-    width: WIDTH_BASE_RATIO(34),
-    height: HEIGHT_BASE_RATIO(34),
-    borderRadius: WIDTH_BASE_RATIO(10),
+    width: 34,
+    height: 34,
+    borderRadius: 10,
     backgroundColor: 'rgba(255,255,255,0.06)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-
-  inputWrap: {
-    marginBottom: HEIGHT_BASE_RATIO(16),
-  },
-
+  inputWrap: {marginBottom: 16},
   inputLabel: {
     fontFamily: FontFamily.UrbanistMedium,
-    fontSize: FONT_SIZE(13),
+    fontSize: 13,
     color: Colors.GreyText,
-    marginBottom: HEIGHT_BASE_RATIO(8),
+    marginBottom: 8,
   },
-
   input: {
     backgroundColor: 'rgba(255,255,255,0.06)',
-    borderRadius: WIDTH_BASE_RATIO(14),
-    borderWidth: WIDTH_BASE_RATIO(1),
+    borderRadius: 14,
+    borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.05)',
-    height: HEIGHT_BASE_RATIO(50),
-    paddingHorizontal: WIDTH_BASE_RATIO(16),
+    height: 50,
+    paddingHorizontal: 16,
     fontFamily: FontFamily.UrbanistMedium,
-    fontSize: FONT_SIZE(15),
+    fontSize: 15,
     color: Colors.White,
   },
-
-  btnRow: {
-    flexDirection: 'row',
-    columnGap: WIDTH_BASE_RATIO(10),
-    marginTop: HEIGHT_BASE_RATIO(8),
-  },
-
+  btnRow: {flexDirection: 'row', gap: 10, marginTop: 8},
   cancelBtn: {
     flex: 1,
-    height: HEIGHT_BASE_RATIO(50),
-    borderRadius: WIDTH_BASE_RATIO(14),
+    height: 50,
+    borderRadius: 14,
     backgroundColor: 'rgba(255,255,255,0.07)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-
   cancelBtnText: {
     fontFamily: FontFamily.UrbanistSemiBold,
-    fontSize: FONT_SIZE(14),
+    fontSize: 14,
     color: Colors.White,
   },
-
   saveBtn: {
     flex: 1.5,
-    height: HEIGHT_BASE_RATIO(50),
-    borderRadius: WIDTH_BASE_RATIO(14),
+    height: 50,
+    borderRadius: 14,
     backgroundColor: '#E8490F',
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    columnGap: WIDTH_BASE_RATIO(7),
+    gap: 7,
     shadowColor: '#E8490F',
     shadowOpacity: 0.3,
-    shadowRadius: WIDTH_BASE_RATIO(12),
-    shadowOffset: {width: 0, height: HEIGHT_BASE_RATIO(4)},
+    shadowRadius: 12,
+    shadowOffset: {width: 0, height: 4},
     elevation: 5,
   },
-
   saveBtnText: {
     fontFamily: FontFamily.UrbanistBold,
-    fontSize: FONT_SIZE(14),
+    fontSize: 14,
     color: '#FFFFFF',
   },
 });
