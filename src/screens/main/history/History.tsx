@@ -31,6 +31,7 @@ import {
   Signal,
   Circle,
 } from 'lucide-react-native';
+import LiveTrackingScreen from '../liveTracking/LiveTrackingScreen';
 
 interface PastRequest {
   id: string;
@@ -97,9 +98,8 @@ export const History: React.FC = () => {
     'Searching' | 'Assigned' | 'En Route' | 'Completed'
   >('En Route');
   const [etaSeconds, setEtaSeconds] = useState(720);
-  const [selectedRequest, setSelectedRequest] = useState<PastRequest | null>(
-    null,
-  );
+  const [selectedRequest, setSelectedRequest] = useState<PastRequest | null>(null);
+  const [showLiveTracking, setShowLiveTracking] = useState(false);
 
   useEffect(() => {
     if (requestStatus === 'Completed') return;
@@ -313,9 +313,13 @@ export const History: React.FC = () => {
               {/* Buttons */}
               <View style={styles.actionRow}>
                 <TouchableOpacity
-                  style={styles.trackBtn}
+                  style={[
+                    styles.trackBtn,
+                    requestStatus === 'Searching' && styles.trackBtnDisabled,
+                  ]}
                   activeOpacity={0.85}
-                  disabled={requestStatus === 'Searching'}>
+                  disabled={requestStatus === 'Searching'}
+                  onPress={() => setShowLiveTracking(true)}>
                   <Navigation2 size={16} color="#FFFFFF" strokeWidth={2} />
                   <Text style={styles.trackBtnText}>Live Track</Text>
                 </TouchableOpacity>
@@ -440,6 +444,15 @@ export const History: React.FC = () => {
         )}
         <View style={styles.bottomSpacer} />
       </ScrollView>
+
+      {/* ── Live Tracking Full-Screen Modal ── */}
+      <Modal
+        visible={showLiveTracking}
+        animationType="slide"
+        statusBarTranslucent
+        onRequestClose={() => setShowLiveTracking(false)}>
+        <LiveTrackingScreen onClose={() => setShowLiveTracking(false)} />
+      </Modal>
 
       {/* Timeline Modal */}
       <Modal
@@ -775,6 +788,9 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     shadowOffset: {width: 0, height: 4},
     elevation: 5,
+  },
+  trackBtnDisabled: {
+    opacity: 0.4,
   },
   trackBtnText: {
     fontFamily: FontFamily.UrbanistBold,
