@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useCallback, useState} from 'react';
 import {
   View,
   Text,
@@ -10,10 +10,15 @@ import {
   TextInput,
   Switch,
   Platform,
+  Alert,
+  ActivityIndicator,
+  InteractionManager,
 } from 'react-native';
 import {Colors} from '../../../generalStyles/colors';
 import {FontFamily} from '../../../generalStyles/generalFonts';
-import {useNavigation} from '@react-navigation/native';
+import {useNavigation, useFocusEffect} from '@react-navigation/native';
+import {requestCurrentLocation, Coordinates} from '../../../utils/location';
+import {createServiceRequest} from '../../../requestHandler/api';
 
 interface IssueOption {
   id: string;
@@ -30,11 +35,73 @@ const issues: IssueOption[] = [
   {id: 'other', label: 'Other', icon: '❓'},
 ];
 
+// Placeholder until vehicle selection (GET /vehicles) is wired into this screen.
+const MOCK_VEHICLE = {
+  make: 'Toyota',
+  model: 'Corolla',
+  year: 2019,
+  registration_number: 'LHR-4521',
+};
+
 const RequestHelp = () => {
   const navigation = useNavigation();
   const [selectedIssue, setSelectedIssue] = useState<string>('flat_tyre');
   const [notes, setNotes] = useState<string>('');
   const [smsFallback, setSmsFallback] = useState<boolean>(true);
+  const [location, setLocation] = useState<Coordinates | null>(null);
+  const [locationLoading, setLocationLoading] = useState(true);
+  const [locationError, setLocationError] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  const fetchLocation = useCallback(async () => {
+    setLocationLoading(true);
+    setLocationError(false);
+    const coords = await requestCurrentLocation();
+    setLocation(coords);
+    setLocationLoading(false);
+    setLocationError(!coords);
+  }, []);
+
+  // useFocusEffect (not useEffect-on-mount) + runAfterInteractions: kicking off
+  // the permission prompt/GPS call while the push transition is still animating
+  // can get it silently dropped or stalled (seen on Android in particular).
+  // Waiting for the screen to be focused and interactions to settle first, and
+  // re-fetching on every focus, makes this reliable across back-and-forth nav.
+  useFocusEffect(
+    useCallback(() => {
+      const task = InteractionManager.runAfterInteractions(() => {
+        fetchLocation();
+      });
+      return () => task.cancel();
+    }, [fetchLocation]),
+  );
+
+  const handleSubmit = async () => {
+    if (!location) {
+      Alert.alert('Location required', 'We need your location to request help.');
+      return;
+    }
+    const issue = issues.find(i => i.id === selectedIssue);
+    setSubmitting(true);
+    try {
+      await createServiceRequest({
+        service_category_id: selectedIssue,
+        description: notes || issue?.label || 'Roadside assistance needed',
+        latitude: location.latitude,
+        longitude: location.longitude,
+        address: `${location.latitude.toFixed(5)}, ${location.longitude.toFixed(5)}`,
+        vehicle: MOCK_VEHICLE,
+      });
+      navigation.goBack();
+    } catch (error) {
+      Alert.alert(
+        'Request failed',
+        'Could not reach the server. Please try again.',
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -74,11 +141,33 @@ const RequestHelp = () => {
           <View style={styles.cardHeader}>
             <Text style={styles.cardLabel}>📍 Your Location (Auto-detected)</Text>
           </View>
-          <Text style={styles.locationTitle}>Canal Road, near Kalma Chowk, Lahore</Text>
-          <Text style={styles.coordinates}>31.5204° N, 74.3587° E</Text>
-          <TouchableOpacity activeOpacity={0.7} style={styles.cardLinkContainer}>
-            <Text style={styles.cardLinkText}>✏️ Correct Location</Text>
-          </TouchableOpacity>
+          {locationLoading ? (
+            <View style={styles.locationLoadingRow}>
+              <ActivityIndicator color="#E8490F" size="small" />
+              <Text style={styles.locationLoadingText}>Detecting your location…</Text>
+            </View>
+          ) : location ? (
+            <Text style={styles.coordinates}>
+              {location.latitude.toFixed(4)}° N, {location.longitude.toFixed(4)}° E
+            </Text>
+          ) : (
+            <Text style={styles.coordinates}>
+              {locationError ? 'Could not detect location' : 'Location unavailable'}
+            </Text>
+          )}
+          {locationError ? (
+            <TouchableOpacity
+              activeOpacity={0.7}
+              style={styles.cardLinkContainer}
+              onPress={fetchLocation}
+            >
+              <Text style={styles.cardLinkText}>↻ Retry</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity activeOpacity={0.7} style={styles.cardLinkContainer}>
+              <Text style={styles.cardLinkText}>✏️ Correct Location</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* ── Select Vehicle Card ── */}
@@ -173,14 +262,16 @@ const RequestHelp = () => {
       {/* ── Bottom Submit Button ── */}
       <View style={styles.bottomBtnContainer}>
         <TouchableOpacity
-          style={styles.primaryBtn}
+          style={[styles.primaryBtn, submitting && styles.primaryBtnDisabled]}
           activeOpacity={0.85}
-          onPress={() => {
-            // Placeholder submit handler
-            navigation.goBack();
-          }}
+          disabled={submitting}
+          onPress={handleSubmit}
         >
-          <Text style={styles.primaryBtnText}>Request Help Now</Text>
+          {submitting ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Text style={styles.primaryBtnText}>Request Help Now</Text>
+          )}
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -289,18 +380,22 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: Colors.GreyText || '#A7A7A7',
   },
-  locationTitle: {
-    fontFamily: FontFamily.UrbanistBold || 'System',
-    fontSize: 16,
-    color: Colors.White || '#FFFFFF',
-    fontWeight: '700',
-    marginBottom: 4,
-  },
   coordinates: {
     fontFamily: FontFamily.UrbanistRegular || 'System',
     fontSize: 13,
     color: Colors.Grey || '#868686',
     marginBottom: 12,
+  },
+  locationLoadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  locationLoadingText: {
+    fontFamily: FontFamily.UrbanistRegular || 'System',
+    fontSize: 13,
+    color: Colors.Grey || '#868686',
   },
   cardLinkContainer: {
     alignSelf: 'flex-start',
@@ -488,6 +583,9 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     shadowOffset: {width: 0, height: 6},
     elevation: 8,
+  },
+  primaryBtnDisabled: {
+    opacity: 0.6,
   },
   primaryBtnText: {
     fontFamily: FontFamily.UrbanistBold || 'System',

@@ -1,16 +1,4 @@
-import {ComponentType} from 'react';
-import AuthNavigationStack from '../../../navigation/authStackNavigation';
-
-import {
-  EnterInformation,
-  GetStarted,
-  name: 'authStack',
-  component: AuthNavigationStack,
-  initialRouteName: 'GetStarted',
-
-  nestedScreens: {
-    GetStarted: {
-      name: 'GetStarted' as const,
-      component: GetStarted as ComponentType<any>,
-    },
-
+// Legacy auth stack constants file. 
+// Unused and commented out to prevent TypeScript compiler errors.
+// The active file is at: src/constants/stack/authStack/authStack.ts
+export {};

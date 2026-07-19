@@ -12,9 +12,10 @@ import {
 } from 'react-native';
 import {Colors} from '../../../generalStyles/colors';
 import {FontFamily} from '../../../generalStyles/generalFonts';
-import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../../../navigation/rootNavigation';
+import {useNavigation, useRoute} from '@react-navigation/native';
+import {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import {RootStackParamList} from '../../../navigation/rootNavigation';
+import {AuthStack} from '../../../constants/stack/authStack/authStack';
 
 interface OtpScreenProps {
   onBack?: () => void;
@@ -27,7 +28,9 @@ const OtpScreen: React.FC<OtpScreenProps> = ({
   onVerify,
   phoneNumber = '+92 311 2345678',
 }) => {
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const navigation = useNavigation<NativeStackNavigationProp<any>>();
+  const route = useRoute<any>();
+  const role = route.params?.role || 'customer';
   const [otp, setOtp] = useState<string[]>(['', '', '', '']);
   const inputs = useRef<Array<TextInput | null>>([]);
 
@@ -54,10 +57,18 @@ const OtpScreen: React.FC<OtpScreenProps> = ({
     if (otpCode.length === 4) {
       if (onVerify) {
         onVerify(otpCode);
+        return;
+      }
+      if (role === 'provider') {
+        // Provider → go to service selection (still within AuthStack)
+        navigation.navigate(
+          AuthStack.nestedScreens.ProviderSelectServices.name as never,
+        );
       } else {
+        // Customer → jump to main app
         navigation.reset({
           index: 0,
-          routes: [{ name: 'MainStack' as never }],
+          routes: [{name: 'MainStack' as never}],
         });
       }
     }
@@ -72,13 +83,15 @@ const OtpScreen: React.FC<OtpScreenProps> = ({
         <View style={styles.content}>
           {/* ── Header ── */}
           <View style={styles.header}>
-            <TouchableOpacity style={styles.backButton} onPress={() => {
-              if (onBack) {
-                onBack();
-              } else {
-                navigation.goBack();
-              }
-            }}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => {
+                if (onBack) {
+                  onBack();
+                } else {
+                  navigation.goBack();
+                }
+              }}>
               <Text style={styles.backIcon}>←</Text>
             </TouchableOpacity>
           </View>

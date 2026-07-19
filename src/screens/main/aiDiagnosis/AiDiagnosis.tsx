@@ -95,7 +95,7 @@ const AiDiagnosis: React.FC = () => {
   const pickImage = (type: 'camera' | 'library') => {
     const options = {
       mediaType: 'photo' as const,
-      quality: 0.8,
+      quality: 0.8 as any,
       includeBase64: false,
     };
 

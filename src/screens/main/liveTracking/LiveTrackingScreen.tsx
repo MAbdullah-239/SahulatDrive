@@ -8,7 +8,7 @@ import {
   Platform,
   StatusBar,
 } from 'react-native';
-import MapView, {Marker, Polyline} from 'react-native-maps';
+import MapView, {Marker, Polyline, PROVIDER_GOOGLE} from 'react-native-maps';
 import {
   ArrowLeft,
   Phone,
@@ -116,6 +116,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({onClose}) => {
         translucent
       />
       <MapView
+        provider={PROVIDER_GOOGLE}
         style={StyleSheet.absoluteFillObject}
         userInterfaceStyle="dark"
         customMapStyle={mapDarkStyle}

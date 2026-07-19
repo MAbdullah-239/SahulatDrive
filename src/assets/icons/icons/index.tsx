@@ -1,0 +1,2 @@
+// Icon assets placeholder
+export {};

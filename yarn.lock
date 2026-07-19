@@ -2741,6 +2741,7 @@ __metadata:
     react-native-asset: "npm:^2.2.14"
     react-native-dotenv: "npm:^3.4.11"
     react-native-gesture-handler: "npm:^2.30.0"
+    react-native-get-location: "npm:^6.0.1"
     react-native-image-picker: "npm:^8.2.1"
     react-native-linear-gradient: "npm:^2.8.3"
     react-native-maps: "npm:^1.26.0"
@@ -8021,6 +8022,15 @@ __metadata:
     react: "*"
     react-native: "*"
   checksum: 10c0/c73621a588ba12cf339c27c5185b3ade250a1bcaf1762d52ecafc09c4883b7ddf2b1956ad427740050af253ee9bb3e201493f391067ef99c084891cbef6dbcc9
+  languageName: node
+  linkType: hard
+
+"react-native-get-location@npm:^6.0.1":
+  version: 6.0.1
+  resolution: "react-native-get-location@npm:6.0.1"
+  peerDependencies:
+    react-native: ">=0.71"
+  checksum: 10c0/98fa2dbb9551d0b06d3b37980119b0ea5d436e3b4e030a7415c9a8228d3c336567b31368773d6ad3876eaaa04f9819ab8c025341098d207d77dc3eec6191c982
   languageName: node
   linkType: hard
 

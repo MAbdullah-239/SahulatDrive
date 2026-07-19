@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useCallback, useRef, useState} from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,10 @@ import {
   SafeAreaView,
   Platform,
   StatusBar,
+  InteractionManager,
 } from 'react-native';
+import {useFocusEffect} from '@react-navigation/native';
+import {requestCurrentLocation, Coordinates} from '../../../utils/location';
 import {Colors} from '../../../generalStyles/colors';
 import {FontFamily} from '../../../generalStyles/generalFonts';
 import {useNavigation} from '@react-navigation/native';
@@ -18,33 +21,90 @@ import {
   AlertTriangle,
   Wrench,
   Bot,
-  MapPin,
   ChevronRight,
   Bell,
+  LocateFixed,
 } from 'lucide-react-native';
+import {BottomTabNavigationProp} from '@react-navigation/bottom-tabs';
+import {BottomTabParamList} from '../../../navigation/bottomTabNavigation';
+import {CompositeNavigationProp} from '@react-navigation/native';
 
-import MapView, {Marker} from 'react-native-maps';
+import MapView, {Marker, PROVIDER_GOOGLE} from 'react-native-maps';
+
+type HomeNavProp = CompositeNavigationProp<
+  NativeStackNavigationProp<MainStackParamList>,
+  BottomTabNavigationProp<BottomTabParamList>
+>;
+
+const DEFAULT_COORDS: Coordinates = {latitude: 31.5204, longitude: 74.3587};
 
 const Home: React.FC = () => {
-  const navigation =
-    useNavigation<NativeStackNavigationProp<MainStackParamList>>();
+  const navigation = useNavigation<HomeNavProp>();
+  const mapRef = useRef<MapView>(null);
+  const [coords, setCoords] = useState<Coordinates | null>(null);
+  const [locationLoading, setLocationLoading] = useState(true);
+  const [recentering, setRecentering] = useState(false);
+
+  const goToCurrentLocation = useCallback(async (fresh: Coordinates) => {
+    mapRef.current?.animateToRegion(
+      {
+        latitude: fresh.latitude,
+        longitude: fresh.longitude,
+        latitudeDelta: 0.02,
+        longitudeDelta: 0.02,
+      },
+      600,
+    );
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      console.log('[home] fetching location for the banner…');
+      const task = InteractionManager.runAfterInteractions(async () => {
+        const location = await requestCurrentLocation();
+        console.log('[home] location result:', location);
+        setCoords(location);
+        setLocationLoading(false);
+      });
+      return () => task.cancel();
+    }, []),
+  );
+
+  const handleRecenter = async () => {
+    setRecentering(true);
+    const location = await requestCurrentLocation();
+    setRecentering(false);
+    if (!location) {
+      return;
+    }
+    setCoords(location);
+    goToCurrentLocation(location);
+  };
+
+  const mapCenter = coords ?? DEFAULT_COORDS;
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor="transparent"
+        translucent
+      />
 
       {/* ── Background Map ── */}
       <MapView
+        ref={mapRef}
+        provider={PROVIDER_GOOGLE}
         style={StyleSheet.absoluteFillObject}
         userInterfaceStyle="dark"
         initialRegion={{
-          latitude: 31.5204,
-          longitude: 74.3587,
+          latitude: mapCenter.latitude,
+          longitude: mapCenter.longitude,
           latitudeDelta: 0.05,
           longitudeDelta: 0.05,
         }}
         customMapStyle={mapDarkStyle}>
-        <Marker coordinate={{latitude: 31.5204, longitude: 74.3587}}>
+        <Marker coordinate={mapCenter}>
           <View style={styles.userDot} />
         </Marker>
         <Marker coordinate={{latitude: 31.5154, longitude: 74.3527}}>
@@ -60,7 +120,6 @@ const Home: React.FC = () => {
       </MapView>
 
       <SafeAreaView style={styles.safeArea} pointerEvents="box-none">
-
         {/* ── Header ── */}
         <View style={styles.topContainer} pointerEvents="box-none">
           <View style={styles.header}>
@@ -80,15 +139,29 @@ const Home: React.FC = () => {
             </View>
           </View>
 
-          {/* Location Banner */}
-          <TouchableOpacity style={styles.locationBanner} activeOpacity={0.8}>
+          {/* Location Banner — tap to recenter the map on your current position */}
+          <TouchableOpacity
+            style={styles.locationBanner}
+            activeOpacity={0.8}
+            onPress={handleRecenter}
+            disabled={recentering}>
             <View style={styles.locationLeft}>
               <View style={styles.locationIconWrap}>
-                <MapPin size={16} color="#E8490F" strokeWidth={2} />
+                <LocateFixed size={16} color="#E8490F" strokeWidth={2} />
               </View>
               <View>
                 <Text style={styles.locationLabel}>Current Location</Text>
-                <Text style={styles.locationText}>Gulberg III, Lahore</Text>
+                <Text style={styles.locationText}>
+                  {recentering
+                    ? 'Locating…'
+                    : locationLoading
+                    ? 'Detecting…'
+                    : coords
+                    ? `${coords.latitude.toFixed(
+                        4,
+                      )}° N, ${coords.longitude.toFixed(4)}° E`
+                    : 'Location unavailable'}
+                </Text>
               </View>
             </View>
             <ChevronRight size={18} color={Colors.GreyText} strokeWidth={1.8} />
@@ -99,16 +172,16 @@ const Home: React.FC = () => {
 
         {/* ── Bottom Dashboard ── */}
         <View style={styles.bottomDashboard} pointerEvents="box-none">
-
           {/* Action Cards */}
           <View style={styles.actionCardsRow}>
-
             {/* Emergency Card */}
             <TouchableOpacity
               style={styles.emergencyCard}
               activeOpacity={0.85}
               onPress={() =>
-                navigation.navigate(MainStackConstants.nestedScreens.RequestHelp.name)
+                navigation.navigate(
+                  MainStackConstants.nestedScreens.RequestHelp.name,
+                )
               }>
               <View style={styles.emergencyIconWrapper}>
                 <AlertTriangle size={26} color="#FFFFFF" strokeWidth={2.5} />
@@ -123,7 +196,9 @@ const Home: React.FC = () => {
                 style={styles.smallCard}
                 activeOpacity={0.85}
                 onPress={() =>
-                  navigation.navigate(MainStackConstants.nestedScreens.BookWorkshop.name)
+                  navigation.navigate(
+                    MainStackConstants.nestedScreens.BookWorkshop.name,
+                  )
                 }>
                 <View style={styles.smallCardIcon}>
                   <Wrench size={20} color="#E8490F" strokeWidth={2} />
@@ -138,7 +213,9 @@ const Home: React.FC = () => {
                 style={styles.smallCard}
                 activeOpacity={0.85}
                 onPress={() =>
-                  navigation.navigate(MainStackConstants.nestedScreens.AiDiagnosis.name)
+                  navigation.navigate(
+                    MainStackConstants.nestedScreens.AiDiagnosis.name,
+                  )
                 }>
                 <View style={styles.smallCardIcon}>
                   <Bot size={20} color="#3B82F6" strokeWidth={2} />
@@ -154,12 +231,14 @@ const Home: React.FC = () => {
           {/* Nearby Mechanics Header */}
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Nearby Mechanics</Text>
-            <TouchableOpacity style={styles.seeAllBtn} activeOpacity={0.7}>
+            <TouchableOpacity
+              style={styles.seeAllBtn}
+              activeOpacity={0.7}
+              onPress={() => navigation.navigate('ExploreTab')}>
               <Text style={styles.seeAllLink}>See all</Text>
               <ChevronRight size={14} color="#E8490F" strokeWidth={2.5} />
             </TouchableOpacity>
           </View>
-
         </View>
       </SafeAreaView>
     </View>
@@ -416,21 +495,85 @@ const mapDarkStyle = [
   {elementType: 'labels.icon', stylers: [{visibility: 'off'}]},
   {elementType: 'labels.text.fill', stylers: [{color: '#757575'}]},
   {elementType: 'labels.text.stroke', stylers: [{color: '#212121'}]},
-  {featureType: 'administrative', elementType: 'geometry', stylers: [{color: '#757575'}]},
-  {featureType: 'administrative.country', elementType: 'labels.text.fill', stylers: [{color: '#9e9e9e'}]},
+  {
+    featureType: 'administrative',
+    elementType: 'geometry',
+    stylers: [{color: '#757575'}],
+  },
+  {
+    featureType: 'administrative.country',
+    elementType: 'labels.text.fill',
+    stylers: [{color: '#9e9e9e'}],
+  },
   {featureType: 'administrative.land_parcel', stylers: [{visibility: 'off'}]},
-  {featureType: 'administrative.locality', elementType: 'labels.text.fill', stylers: [{color: '#bdbdbd'}]},
-  {featureType: 'poi', elementType: 'labels.text.fill', stylers: [{color: '#757575'}]},
-  {featureType: 'poi.park', elementType: 'geometry', stylers: [{color: '#181818'}]},
-  {featureType: 'poi.park', elementType: 'labels.text.fill', stylers: [{color: '#616161'}]},
-  {featureType: 'poi.park', elementType: 'labels.text.stroke', stylers: [{color: '#1b1b1b'}]},
-  {featureType: 'road', elementType: 'geometry.fill', stylers: [{color: '#2c2c2c'}]},
-  {featureType: 'road', elementType: 'labels.text.fill', stylers: [{color: '#8a8a8a'}]},
-  {featureType: 'road.arterial', elementType: 'geometry', stylers: [{color: '#373737'}]},
-  {featureType: 'road.highway', elementType: 'geometry', stylers: [{color: '#3c3c3c'}]},
-  {featureType: 'road.highway.controlled_access', elementType: 'geometry', stylers: [{color: '#4e4e4e'}]},
-  {featureType: 'road.local', elementType: 'labels.text.fill', stylers: [{color: '#616161'}]},
-  {featureType: 'transit', elementType: 'labels.text.fill', stylers: [{color: '#757575'}]},
-  {featureType: 'water', elementType: 'geometry', stylers: [{color: '#000000'}]},
-  {featureType: 'water', elementType: 'labels.text.fill', stylers: [{color: '#3d3d3d'}]},
+  {
+    featureType: 'administrative.locality',
+    elementType: 'labels.text.fill',
+    stylers: [{color: '#bdbdbd'}],
+  },
+  {
+    featureType: 'poi',
+    elementType: 'labels.text.fill',
+    stylers: [{color: '#757575'}],
+  },
+  {
+    featureType: 'poi.park',
+    elementType: 'geometry',
+    stylers: [{color: '#181818'}],
+  },
+  {
+    featureType: 'poi.park',
+    elementType: 'labels.text.fill',
+    stylers: [{color: '#616161'}],
+  },
+  {
+    featureType: 'poi.park',
+    elementType: 'labels.text.stroke',
+    stylers: [{color: '#1b1b1b'}],
+  },
+  {
+    featureType: 'road',
+    elementType: 'geometry.fill',
+    stylers: [{color: '#2c2c2c'}],
+  },
+  {
+    featureType: 'road',
+    elementType: 'labels.text.fill',
+    stylers: [{color: '#8a8a8a'}],
+  },
+  {
+    featureType: 'road.arterial',
+    elementType: 'geometry',
+    stylers: [{color: '#373737'}],
+  },
+  {
+    featureType: 'road.highway',
+    elementType: 'geometry',
+    stylers: [{color: '#3c3c3c'}],
+  },
+  {
+    featureType: 'road.highway.controlled_access',
+    elementType: 'geometry',
+    stylers: [{color: '#4e4e4e'}],
+  },
+  {
+    featureType: 'road.local',
+    elementType: 'labels.text.fill',
+    stylers: [{color: '#616161'}],
+  },
+  {
+    featureType: 'transit',
+    elementType: 'labels.text.fill',
+    stylers: [{color: '#757575'}],
+  },
+  {
+    featureType: 'water',
+    elementType: 'geometry',
+    stylers: [{color: '#000000'}],
+  },
+  {
+    featureType: 'water',
+    elementType: 'labels.text.fill',
+    stylers: [{color: '#3d3d3d'}],
+  },
 ];

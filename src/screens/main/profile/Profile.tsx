@@ -1,4 +1,7 @@
 import React, {useState} from 'react';
+import {useNavigation} from '@react-navigation/native';
+import {useAppDispatch} from '../../../redux/hooks';
+import {logout} from '../../../redux/slices/authSlice';
 import {
   View,
   Text,
@@ -75,6 +78,8 @@ const SETTINGS = [
 ];
 
 export const Profile: React.FC = () => {
+  const navigation = useNavigation<any>();
+  const dispatch = useAppDispatch();
   const [name, setName] = useState('Ahmed Raza');
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [vehicles, setVehicles] = useState<Vehicle[]>(initialVehicles);
@@ -138,7 +143,10 @@ export const Profile: React.FC = () => {
       'Are you sure you want to sign out of Sahulat Drive?',
       [
         {text: 'Cancel', style: 'cancel'},
-        {text: 'Log Out', style: 'destructive', onPress: () => {}},
+        {text: 'Log Out', style: 'destructive', onPress: () => {
+            dispatch(logout());
+            navigation.reset({ index: 0, routes: [{ name: 'AuthStack' }] });
+          }},
       ],
     );
 

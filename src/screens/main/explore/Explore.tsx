@@ -11,7 +11,7 @@ import {
   Modal,
   SafeAreaView,
 } from 'react-native';
-import MapView, {Marker} from 'react-native-maps';
+import MapView, {Marker, PROVIDER_GOOGLE} from 'react-native-maps';
 import {Colors} from '../../../generalStyles/colors';
 import {FontFamily} from '../../../generalStyles/generalFonts';
 import {
@@ -559,6 +559,7 @@ export const Explore: React.FC = () => {
         {/* Map Preview */}
         <View style={styles.mapContainer}>
           <MapView
+            provider={PROVIDER_GOOGLE}
             style={StyleSheet.absoluteFillObject}
             userInterfaceStyle="dark"
             initialRegion={{

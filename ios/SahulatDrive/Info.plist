@@ -33,7 +33,7 @@
 		<true/>
 	</dict>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string></string>
+	<string>SahulatDrive needs your location to find nearby help and share your position with your assigned provider.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>SahulatDrive requires access to the camera to capture images of vehicle problems for AI diagnosis.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
