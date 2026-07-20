@@ -13,6 +13,11 @@ import {Colors} from '../../../generalStyles/colors';
 import {FontFamily} from '../../../generalStyles/generalFonts';
 import {useNavigation} from '@react-navigation/native';
 import {Clock, CheckCircle, Shield, Bell} from 'lucide-react-native';
+import {getCurrentUser, getNotifications} from '../../../requestHandler/api';
+import {useAppDispatch} from '../../../redux/hooks';
+import {setVerified} from '../../../redux/slices/providerSlice';
+
+const APPROVAL_POLL_INTERVAL_MS = 8000;
 
 const STEPS = [
   {label: 'Documents received', done: true, icon: CheckCircle, color: '#10B981'},
@@ -23,6 +28,7 @@ const STEPS = [
 
 const ProviderPendingApproval: React.FC = () => {
   const navigation = useNavigation<any>();
+  const dispatch = useAppDispatch();
 
   // Pulse animation for the waiting indicator
   const pulse = useRef(new Animated.Value(1)).current;
@@ -52,6 +58,49 @@ const ProviderPendingApproval: React.FC = () => {
       }),
     ).start();
   }, [pulse, rotate]);
+
+  // status === 'active' on /me is the authoritative field, confirmed against
+  // a real response (there is no provider_profile.is_verified, despite
+  // earlier backend guidance) — check that first. The notifications check is
+  // a secondary signal in case /me is ever stale, and the FCM push (see
+  // setUpPushNavigation) may fire faster than either, but can't be trusted
+  // alone since some approval pushes only carry a display "notification"
+  // block with no "data" payload to match on.
+  useEffect(() => {
+    let cancelled = false;
+
+    const checkApproval = async () => {
+      try {
+        const {data: meData} = await getCurrentUser();
+        const isVerified = meData.user.status === 'active';
+        dispatch(setVerified(isVerified));
+        if (isVerified) {
+          if (!cancelled) {
+            navigation.reset({index: 0, routes: [{name: 'ProviderStack'}]});
+          }
+          return;
+        }
+
+        const {data: notifData} = await getNotifications();
+        const approvedViaNotification = notifData.notifications.some(n =>
+          n.title.toLowerCase().includes('verified'),
+        );
+        if (approvedViaNotification && !cancelled) {
+          dispatch(setVerified(true));
+          navigation.reset({index: 0, routes: [{name: 'ProviderStack'}]});
+        }
+      } catch {
+        // Network hiccup — next poll tick will retry.
+      }
+    };
+
+    checkApproval();
+    const interval = setInterval(checkApproval, APPROVAL_POLL_INTERVAL_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [navigation]);
 
   const spin = rotate.interpolate({
     inputRange: [0, 1],

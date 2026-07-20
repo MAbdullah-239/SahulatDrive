@@ -10,7 +10,12 @@ import {
   InteractionManager,
 } from 'react-native';
 import {useFocusEffect} from '@react-navigation/native';
-import {requestCurrentLocation, Coordinates} from '../../../utils/location';
+import {
+  requestCurrentLocation,
+  reverseGeocode,
+  Coordinates,
+} from '../../../utils/location';
+import {useAppSelector} from '../../../redux/hooks';
 import {Colors} from '../../../generalStyles/colors';
 import {FontFamily} from '../../../generalStyles/generalFonts';
 import {useNavigation} from '@react-navigation/native';
@@ -21,6 +26,7 @@ import {
   AlertTriangle,
   Wrench,
   Bot,
+  Mic,
   ChevronRight,
   Bell,
   LocateFixed,
@@ -40,8 +46,17 @@ const DEFAULT_COORDS: Coordinates = {latitude: 31.5204, longitude: 74.3587};
 
 const Home: React.FC = () => {
   const navigation = useNavigation<HomeNavProp>();
+  const userName = useAppSelector(state => state.auth.user?.name);
+  const userInitials =
+    userName
+      ?.trim()
+      .split(/\s+/)
+      .slice(0, 2)
+      .map(part => part[0]?.toUpperCase())
+      .join('') || '?';
   const mapRef = useRef<MapView>(null);
   const [coords, setCoords] = useState<Coordinates | null>(null);
+  const [placeName, setPlaceName] = useState<string | null>(null);
   const [locationLoading, setLocationLoading] = useState(true);
   const [recentering, setRecentering] = useState(false);
 
@@ -61,10 +76,16 @@ const Home: React.FC = () => {
     useCallback(() => {
       console.log('[home] fetching location for the banner…');
       const task = InteractionManager.runAfterInteractions(async () => {
-        const location = await requestCurrentLocation();
+        // forceRefresh: this screen is the first thing the user sees each
+        // time — reusing a stale cached fix here is exactly what made the
+        // location look "static" instead of tracking real movement.
+        const location = await requestCurrentLocation(true);
         console.log('[home] location result:', location);
         setCoords(location);
         setLocationLoading(false);
+        if (location) {
+          setPlaceName(await reverseGeocode(location));
+        }
       });
       return () => task.cancel();
     }, []),
@@ -72,13 +93,14 @@ const Home: React.FC = () => {
 
   const handleRecenter = async () => {
     setRecentering(true);
-    const location = await requestCurrentLocation();
+    const location = await requestCurrentLocation(true);
     setRecentering(false);
     if (!location) {
       return;
     }
     setCoords(location);
     goToCurrentLocation(location);
+    setPlaceName(await reverseGeocode(location));
   };
 
   const mapCenter = coords ?? DEFAULT_COORDS;
@@ -125,7 +147,7 @@ const Home: React.FC = () => {
           <View style={styles.header}>
             <View>
               <Text style={styles.greetingText}>Good morning 👋</Text>
-              <Text style={styles.userName}>Ahmed Raza</Text>
+              <Text style={styles.userName}>{userName ?? 'there'}</Text>
             </View>
             <View style={styles.headerRight}>
               <TouchableOpacity style={styles.bellBtn} activeOpacity={0.7}>
@@ -133,7 +155,7 @@ const Home: React.FC = () => {
                 <View style={styles.bellDot} />
               </TouchableOpacity>
               <View style={styles.avatarContainer}>
-                <Text style={styles.avatarInitials}>AR</Text>
+                <Text style={styles.avatarInitials}>{userInitials}</Text>
                 <View style={styles.onlineDot} />
               </View>
             </View>
@@ -149,13 +171,15 @@ const Home: React.FC = () => {
               <View style={styles.locationIconWrap}>
                 <LocateFixed size={16} color="#E8490F" strokeWidth={2} />
               </View>
-              <View>
+              <View style={styles.locationTextWrap}>
                 <Text style={styles.locationLabel}>Current Location</Text>
                 <Text style={styles.locationText}>
                   {recentering
                     ? 'Locating…'
                     : locationLoading
                     ? 'Detecting…'
+                    : placeName
+                    ? placeName
                     : coords
                     ? `${coords.latitude.toFixed(
                         4,
@@ -227,6 +251,25 @@ const Home: React.FC = () => {
               </TouchableOpacity>
             </View>
           </View>
+
+          <TouchableOpacity
+            style={styles.voiceAssistantCard}
+            activeOpacity={0.85}
+            onPress={() =>
+              navigation.navigate(
+                MainStackConstants.nestedScreens.VoiceAssistant.name,
+              )
+            }>
+            <View style={styles.smallCardIcon}>
+              <Mic size={20} color="#34C85A" strokeWidth={2} />
+            </View>
+            <View>
+              <Text style={styles.cardTitle}>Voice Assistant</Text>
+              <Text style={styles.cardSubtitle}>
+                Ask about vehicle issues, in English or Urdu
+              </Text>
+            </View>
+          </TouchableOpacity>
 
           {/* Nearby Mechanics Header */}
           <View style={styles.sectionHeader}>
@@ -356,20 +399,33 @@ const styles = StyleSheet.create({
     borderColor: '#0F1013',
   },
   locationBanner: {
+    width: '100%',
+    height: 80,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: 'rgba(255,255,255,0.06)',
     borderRadius: 16,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.05)',
   },
   locationLeft: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+  },
+
+  locationTextWrap: {
+    flex: 1,
+    width: 340,
+  },
+
+  locationText: {
+    fontFamily: FontFamily.UrbanistSemiBold,
+    fontSize: 12,
+    color: Colors.White,
   },
   locationIconWrap: {
     width: 36,
@@ -378,6 +434,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(232,73,15,0.12)',
     justifyContent: 'center',
     alignItems: 'center',
+    marginLeft: 7,
   },
   locationLabel: {
     fontFamily: FontFamily.UrbanistRegular,
@@ -385,11 +442,7 @@ const styles = StyleSheet.create({
     color: Colors.GreyText,
     marginBottom: 2,
   },
-  locationText: {
-    fontFamily: FontFamily.UrbanistSemiBold,
-    fontSize: 14,
-    color: Colors.White,
-  },
+
   bottomDashboard: {
     paddingHorizontal: 20,
     paddingBottom: Platform.OS === 'ios' ? 0 : 16,
@@ -436,6 +489,18 @@ const styles = StyleSheet.create({
   rightCardsColumn: {
     flex: 1.05,
     gap: 12,
+  },
+  voiceAssistantCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    gap: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
+    marginBottom: 24,
   },
   smallCard: {
     flex: 1,

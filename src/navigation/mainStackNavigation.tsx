@@ -4,13 +4,18 @@ import BottomTabNavigation from './bottomTabNavigation';
 import RequestHelp from '../screens/main/requestHelp/RequestHelp';
 import BookWorkshop from '../screens/main/bookWorkshop/BookWorkshop';
 import AiDiagnosis from '../screens/main/aiDiagnosis/AiDiagnosis';
+import VoiceAssistant from '../screens/main/voiceAssistant/VoiceAssistant';
+import MechanicWorkshopDetail from '../screens/main/mechanicDetail/MechanicWorkshopDetail';
 import {MainStack as MainStackConstants} from '../constants/stack/mainStack/mainStack';
+import {DetailParams} from '../screens/main/mechanicDetail/MechanicWorkshopDetail';
 
 export type MainStackParamList = {
   MainTabs: undefined;
   RequestHelp: undefined;
   BookWorkshop: undefined;
   AiDiagnosis: undefined;
+  VoiceAssistant: undefined;
+  MechanicWorkshopDetail: {item: DetailParams};
 };
 
 const Stack = createNativeStackNavigator<MainStackParamList>();
@@ -35,6 +40,15 @@ const MainStackNavigation = () => {
       <Stack.Screen
         name={MainStackConstants.nestedScreens.AiDiagnosis.name}
         component={AiDiagnosis}
+      />
+      <Stack.Screen
+        name={MainStackConstants.nestedScreens.VoiceAssistant.name}
+        component={VoiceAssistant}
+      />
+      <Stack.Screen
+        name="MechanicWorkshopDetail"
+        component={MechanicWorkshopDetail}
+        options={{animation: 'slide_from_right'}}
       />
     </Stack.Navigator>
   );

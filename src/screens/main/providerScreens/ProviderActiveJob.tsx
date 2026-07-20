@@ -9,6 +9,7 @@ import {
   Platform,
   ScrollView,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import {Colors} from '../../../generalStyles/colors';
 import {FontFamily} from '../../../generalStyles/generalFonts';
@@ -26,6 +27,7 @@ import {
   MessageSquare,
 } from 'lucide-react-native';
 import MapView, {Marker, Polyline, PROVIDER_GOOGLE} from 'react-native-maps';
+import {updateServiceRequest} from '../../../requestHandler/api';
 
 const MOCK_ACTIVE_JOB = {
   id: 'req_001',
@@ -49,24 +51,45 @@ const STEPS = ['accepted', 'arrived', 'started', 'completed'];
 const ProviderActiveJob: React.FC = () => {
   const navigation = useNavigation<NativeStackNavigationProp<ProviderStackParamList>>();
   const route = useRoute<any>();
+  const job = route.params?.job ?? MOCK_ACTIVE_JOB;
   const [jobStatus, setJobStatus] = useState<'accepted' | 'arrived' | 'started' | 'completed'>('accepted');
+  const [updatingStatus, setUpdatingStatus] = useState(false);
 
-  const advanceStatus = () => {
-    if (jobStatus === 'accepted') {
-      setJobStatus('arrived');
-      Alert.alert('Status Updated', 'You have arrived at the customer location.');
-    } else if (jobStatus === 'arrived') {
-      setJobStatus('started');
-      Alert.alert('Job Started', 'You have started working on the vehicle.');
-    } else if (jobStatus === 'started') {
-      setJobStatus('completed');
-      Alert.alert('Job Completed! 🎉', 'Payment of PKR 800 received.', [
-        {
-          text: 'Go Home',
-          onPress: () =>
-            navigation.reset({index: 0, routes: [{name: 'ProviderTabs'}]}),
-        },
-      ]);
+  // Map local stepper states to the API's status enum
+  const NEXT_API_STATUS: Record<string, 'on_the_way' | 'completed'> = {
+    accepted: 'on_the_way',
+    arrived: 'on_the_way',
+    started: 'completed',
+  };
+
+  const advanceStatus = async () => {
+    if (updatingStatus) return;
+    setUpdatingStatus(true);
+    try {
+      const apiStatus = NEXT_API_STATUS[jobStatus];
+      if (apiStatus) {
+        await updateServiceRequest(job.id, {status: apiStatus});
+      }
+      if (jobStatus === 'accepted') {
+        setJobStatus('arrived');
+        Alert.alert('Status Updated', 'You have arrived at the customer location.');
+      } else if (jobStatus === 'arrived') {
+        setJobStatus('started');
+        Alert.alert('Job Started', 'You have started working on the vehicle.');
+      } else if (jobStatus === 'started') {
+        setJobStatus('completed');
+        Alert.alert('Job Completed! 🎉', `Payment of ${job.price ?? 'PKR 800'} received.`, [
+          {
+            text: 'Go Home',
+            onPress: () =>
+              navigation.reset({index: 0, routes: [{name: 'ProviderTabs'}]}),
+          },
+        ]);
+      }
+    } catch (error: any) {
+      Alert.alert('Update Failed', error?.response?.data?.error ?? 'Could not update status. Try again.');
+    } finally {
+      setUpdatingStatus(false);
     }
   };
 
@@ -79,8 +102,14 @@ const ProviderActiveJob: React.FC = () => {
         {
           text: 'Yes, Cancel',
           style: 'destructive',
-          onPress: () =>
-            navigation.reset({index: 0, routes: [{name: 'ProviderTabs'}]}),
+          onPress: async () => {
+            try {
+              await updateServiceRequest(job.id, {status: 'cancelled'});
+            } catch (_) {
+              // Best-effort cancel — navigate home regardless
+            }
+            navigation.reset({index: 0, routes: [{name: 'ProviderTabs'}]});
+          },
         },
       ],
     );
@@ -115,14 +144,14 @@ const ProviderActiveJob: React.FC = () => {
           longitudeDelta: 0.015,
         }}>
         {/* Customer Marker */}
-        <Marker coordinate={MOCK_ACTIVE_JOB.customerCoords}>
+        <Marker coordinate={job.customerCoords ?? MOCK_ACTIVE_JOB.customerCoords}>
           <View style={styles.customerMarker}>
             <Text style={styles.markerEmoji}>🚗</Text>
           </View>
         </Marker>
 
         {/* Provider Marker */}
-        <Marker coordinate={MOCK_ACTIVE_JOB.providerCoords}>
+        <Marker coordinate={job.providerCoords ?? MOCK_ACTIVE_JOB.providerCoords}>
           <View style={styles.providerMarker}>
             <Text style={styles.markerEmoji}>🔧</Text>
           </View>
@@ -130,7 +159,7 @@ const ProviderActiveJob: React.FC = () => {
 
         {/* Route line */}
         <Polyline
-          coordinates={[MOCK_ACTIVE_JOB.providerCoords, MOCK_ACTIVE_JOB.customerCoords]}
+          coordinates={[job.providerCoords ?? MOCK_ACTIVE_JOB.providerCoords, job.customerCoords ?? MOCK_ACTIVE_JOB.customerCoords]}
           strokeColor="#E8490F"
           strokeWidth={4}
           lineDashPattern={[5, 5]}
@@ -148,7 +177,7 @@ const ProviderActiveJob: React.FC = () => {
               {jobStatus === 'started' && 'Service in Progress'}
             </Text>
           </View>
-          <Text style={styles.etaText}>{MOCK_ACTIVE_JOB.eta}</Text>
+          <Text style={styles.etaText}>{job.eta ?? MOCK_ACTIVE_JOB.eta}</Text>
         </View>
 
         <View style={styles.spacer} pointerEvents="none" />
@@ -169,10 +198,10 @@ const ProviderActiveJob: React.FC = () => {
                 <Text style={styles.avatarText}>AR</Text>
               </View>
               <View style={styles.customerInfo}>
-                <Text style={styles.customerName}>{MOCK_ACTIVE_JOB.customerName}</Text>
+                <Text style={styles.customerName}>{job.customerName ?? MOCK_ACTIVE_JOB.customerName}</Text>
                 <View style={styles.ratingRow}>
                   <Compass size={12} color={Colors.GreyText} strokeWidth={2} />
-                  <Text style={styles.distanceText}>{MOCK_ACTIVE_JOB.distance} away</Text>
+                  <Text style={styles.distanceText}>{job.distance ?? MOCK_ACTIVE_JOB.distance} away</Text>
                 </View>
               </View>
               <View style={styles.actionButtons}>
@@ -187,10 +216,10 @@ const ProviderActiveJob: React.FC = () => {
 
             {/* Service Category */}
             <View style={styles.serviceBox}>
-              <Text style={styles.serviceIcon}>{MOCK_ACTIVE_JOB.serviceIcon}</Text>
+              <Text style={styles.serviceIcon}>{job.serviceIcon ?? MOCK_ACTIVE_JOB.serviceIcon}</Text>
               <View style={styles.serviceInfo}>
-                <Text style={styles.serviceLabel}>{MOCK_ACTIVE_JOB.serviceLabel}</Text>
-                <Text style={styles.serviceSub}>{MOCK_ACTIVE_JOB.price} · Cash Payment</Text>
+                <Text style={styles.serviceLabel}>{job.serviceLabel ?? MOCK_ACTIVE_JOB.serviceLabel}</Text>
+                <Text style={styles.serviceSub}>{job.price ?? MOCK_ACTIVE_JOB.price} · Cash Payment</Text>
               </View>
             </View>
 
@@ -198,17 +227,17 @@ const ProviderActiveJob: React.FC = () => {
             <View style={styles.addressBox}>
               <MapPin size={16} color="#E8490F" strokeWidth={2} />
               <Text style={styles.addressText} numberOfLines={2}>
-                {MOCK_ACTIVE_JOB.location}
+                {job.location ?? MOCK_ACTIVE_JOB.location}
               </Text>
             </View>
 
             {/* Customer Notes */}
-            {MOCK_ACTIVE_JOB.notes && (
+            {(job.notes ?? MOCK_ACTIVE_JOB.notes) ? (
               <View style={styles.notesBox}>
                 <Text style={styles.notesTitle}>Customer Notes</Text>
-                <Text style={styles.notesText}>{MOCK_ACTIVE_JOB.notes}</Text>
+                <Text style={styles.notesText}>{job.notes ?? MOCK_ACTIVE_JOB.notes}</Text>
               </View>
-            )}
+            ) : null}
 
             {/* Stepper Display */}
             <View style={styles.stepper}>
@@ -262,8 +291,13 @@ const ProviderActiveJob: React.FC = () => {
                   jobStatus === 'started' && styles.submitBtnComplete,
                 ]}
                 onPress={advanceStatus}
-                activeOpacity={0.85}>
-                <Text style={styles.submitBtnText}>{getStatusButtonText()}</Text>
+                activeOpacity={0.85}
+                disabled={updatingStatus}>
+                {updatingStatus ? (
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                ) : (
+                  <Text style={styles.submitBtnText}>{getStatusButtonText()}</Text>
+                )}
               </TouchableOpacity>
             </View>
           </View>

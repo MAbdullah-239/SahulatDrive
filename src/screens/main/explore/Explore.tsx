@@ -15,32 +15,17 @@ import MapView, {Marker, PROVIDER_GOOGLE} from 'react-native-maps';
 import {Colors} from '../../../generalStyles/colors';
 import {FontFamily} from '../../../generalStyles/generalFonts';
 import {
-  Search,
-  X,
-  MapPin,
-  Star,
-  Clock,
-  Navigation,
-  Zap,
-  Wrench,
-  Fuel,
-  Truck,
-  Droplets,
-  Battery,
-  SlidersHorizontal,
-  ChevronRight,
-  Phone,
-  MessageCircle,
-  CheckCircle,
-  XCircle,
-  MapPinned,
-  Award,
+  Search, X, MapPin, Star, Clock, Navigation,
+  Zap, Wrench, Fuel, Truck, Droplets, Battery,
+  SlidersHorizontal, ChevronRight, Phone, MessageCircle,
+  CheckCircle, XCircle, MapPinned, Award,
 } from 'lucide-react-native';
 import {
-  FONT_SIZE,
-  HEIGHT_BASE_RATIO,
-  WIDTH_BASE_RATIO,
+  FONT_SIZE, HEIGHT_BASE_RATIO, WIDTH_BASE_RATIO,
 } from '../../../utils/helpers';
+import {useNavigation} from '@react-navigation/native';
+import {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import {MainStackParamList} from '../../../navigation/mainStackNavigation';
 
 const {width} = Dimensions.get('window');
 
@@ -439,6 +424,7 @@ const MechanicDetailModal = ({
 
 /* ── Main Explore Screen ── */
 export const Explore: React.FC = () => {
+  const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
   const [selectedWorkshop, setSelectedWorkshop] = useState<Workshop | null>(
@@ -665,7 +651,24 @@ export const Explore: React.FC = () => {
               key={w.id}
               style={styles.workshopCard}
               activeOpacity={0.85}
-              onPress={() => setSelectedWorkshop(w)}>
+              onPress={() =>
+                navigation.navigate('MechanicWorkshopDetail', {
+                  item: {
+                    type: 'workshop',
+                    id: w.id,
+                    name: w.name,
+                    rating: w.rating,
+                    reviews: w.reviews,
+                    distance: w.distance,
+                    open: w.open,
+                    address: w.address,
+                    phone: w.phone,
+                    services: w.services,
+                    hours: w.hours,
+                    coordinate: w.coordinate,
+                  },
+                })
+              }>
               <View style={styles.cardRow}>
                 <View style={styles.workshopIconWrap}>
                   <Wrench size={22} color="#E8490F" strokeWidth={2} />
@@ -772,7 +775,23 @@ export const Explore: React.FC = () => {
                   key={m.id}
                   style={styles.mechanicCard}
                   activeOpacity={0.85}
-                  onPress={() => setSelectedMechanic(m)}>
+                  onPress={() =>
+                    navigation.navigate('MechanicWorkshopDetail', {
+                      item: {
+                        type: 'mechanic',
+                        id: m.id,
+                        name: m.name,
+                        rating: m.rating,
+                        jobs: m.jobs,
+                        specialization: m.specialization,
+                        status: m.status,
+                        experience: m.experience,
+                        phone: m.phone,
+                        skills: m.skills,
+                        coordinate: m.coordinate,
+                      },
+                    })
+                  }>
                   <View style={styles.mechanicCardTop}>
                     <View
                       style={[
@@ -833,19 +852,9 @@ export const Explore: React.FC = () => {
         )}
         <View style={styles.bottomSpacer} />
       </ScrollView>
-      <WorkshopDetailModal
-        workshop={selectedWorkshop}
-        visible={selectedWorkshop !== null}
-        onClose={() => setSelectedWorkshop(null)}
-      />
-      <MechanicDetailModal
-        mechanic={selectedMechanic}
-        visible={selectedMechanic !== null}
-        onClose={() => setSelectedMechanic(null)}
-      />
-    </SafeAreaView>
-  );
-};
+      </SafeAreaView>
+    );
+  };
 
 export default Explore;
 

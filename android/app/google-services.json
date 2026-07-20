@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "767190990200",
+    "project_id": "sahulat-drive-4b475",
+    "storage_bucket": "sahulat-drive-4b475.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:767190990200:android:f31f3346605aaddd90dc8d",
+        "android_client_info": {
+          "package_name": "com.sahulatdrive"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAxk3wH00XOok9w-BiBudoLr3xgGq10pvo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   ScrollView,
   Platform,
   LayoutAnimation,
+  ActivityIndicator,
 } from 'react-native';
 import {Colors} from '../../../generalStyles/colors';
 import {FontFamily} from '../../../generalStyles/generalFonts';
@@ -27,6 +28,7 @@ import {
 import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {ProviderStackParamList} from '../../../navigation/providerStackNavigation';
+import {getProviderJobs} from '../../../requestHandler/api';
 
 const JOB_ICON_MAP: Record<string, any> = {
   towing: Truck,
@@ -94,14 +96,60 @@ const mockJobs = [
 const ProviderJobsHistory: React.FC = () => {
   const navigation = useNavigation<NativeStackNavigationProp<ProviderStackParamList>>();
   const [activeTab, setActiveTab] = useState<'all' | 'completed' | 'cancelled'>('all');
+  const [jobs, setJobs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const filtered = mockJobs.filter(j => {
+  useEffect(() => {
+    const loadJobs = async () => {
+      try {
+        const {data} = await getProviderJobs();
+        const jobsList = Array.isArray(data) ? data : data.jobs || [];
+        if (jobsList.length > 0) {
+          const formatted = jobsList.map((job: any) => {
+            const statusLabel =
+              job.status === 'completed'
+                ? 'Completed'
+                : job.status === 'cancelled'
+                ? 'Cancelled'
+                : 'Active';
+
+            const dateObj = job.created_at ? new Date(job.created_at) : new Date();
+            const dateStr = dateObj.toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' });
+            const timeStr = dateObj.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+
+            return {
+              id: job.id,
+              category: job.service_category?.name || 'towing',
+              customer: job.customer?.name || job.user?.name || 'Customer',
+              customerRating: job.customer?.rating || 4.5,
+              date: dateStr,
+              time: timeStr,
+              location: job.address || 'Unknown Location',
+              amount: `PKR ${job.final_price || job.service_category?.base_price || 1000}`,
+              status: statusLabel,
+            };
+          });
+          setJobs(formatted);
+        } else {
+          setJobs(mockJobs);
+        }
+      } catch (err) {
+        console.error('Failed to load jobs:', err);
+        setJobs(mockJobs);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadJobs();
+  }, []);
+
+  const filtered = jobs.filter(j => {
     if (activeTab === 'all') return true;
     if (activeTab === 'completed') return j.status === 'Completed';
     return j.status === 'Cancelled';
   });
 
-  const totalEarned = mockJobs
+  const totalEarned = jobs
     .filter(j => j.status === 'Completed')
     .reduce((sum, j) => {
       const num = parseInt(j.amount.replace(/\D/g, ''), 10);
@@ -138,96 +186,102 @@ const ProviderJobsHistory: React.FC = () => {
         ))}
       </View>
 
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}>
-        {filtered.map(job => {
-          const Icon = JOB_ICON_MAP[job.category] || Wrench;
-          const color = JOB_COLOR_MAP[job.category] || '#E8490F';
-          const done = job.status === 'Completed';
+      {loading ? (
+        <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
+          <ActivityIndicator size="large" color="#E8490F" />
+        </View>
+      ) : (
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}>
+          {filtered.map(job => {
+            const Icon = JOB_ICON_MAP[job.category] || Wrench;
+            const color = JOB_COLOR_MAP[job.category] || '#E8490F';
+            const done = job.status === 'Completed';
 
-          return (
-            <TouchableOpacity
-              key={job.id}
-              style={styles.jobCard}
-              activeOpacity={0.85}
-              onPress={() => navigation.navigate('ProviderActiveJob')}>
-              {/* Top row */}
-              <View style={styles.jobTopRow}>
-                <View style={styles.jobTypeRow}>
-                  <View style={[styles.jobIcon, {backgroundColor: color + '18'}]}>
-                    <Icon size={18} color={color} strokeWidth={2} />
+            return (
+              <TouchableOpacity
+                key={job.id}
+                style={styles.jobCard}
+                activeOpacity={0.85}
+                onPress={() => navigation.navigate('ProviderActiveJob')}>
+                {/* Top row */}
+                <View style={styles.jobTopRow}>
+                  <View style={styles.jobTypeRow}>
+                    <View style={[styles.jobIcon, {backgroundColor: color + '18'}]}>
+                      <Icon size={18} color={color} strokeWidth={2} />
+                    </View>
+                    <View>
+                      <Text style={styles.jobCategory}>
+                        {job.category.replace('_', ' ').toUpperCase()}
+                      </Text>
+                      <Text style={styles.jobDateTime}>
+                        {job.date} · {job.time}
+                      </Text>
+                    </View>
                   </View>
-                  <View>
-                    <Text style={styles.jobCategory}>
-                      {job.category.replace('_', ' ').toUpperCase()}
-                    </Text>
-                    <Text style={styles.jobDateTime}>
-                      {job.date} · {job.time}
-                    </Text>
-                  </View>
-                </View>
-                <View
-                  style={[
-                    styles.statusBadge,
-                    {
-                      backgroundColor: done ? 'rgba(16,185,129,0.1)' : 'rgba(234,67,53,0.1)',
-                      borderColor: done ? 'rgba(16,185,129,0.25)' : 'rgba(234,67,53,0.25)',
-                    },
-                  ]}>
-                  {done ? (
-                    <CheckCircle size={11} color="#10B981" strokeWidth={2.5} />
-                  ) : (
-                    <X size={11} color="#EA4335" strokeWidth={2.5} />
-                  )}
-                  <Text
+                  <View
                     style={[
-                      styles.statusText,
-                      {color: done ? '#10B981' : '#EA4335'},
+                      styles.statusBadge,
+                      {
+                        backgroundColor: done ? 'rgba(16,185,129,0.1)' : 'rgba(234,67,53,0.1)',
+                        borderColor: done ? 'rgba(16,185,129,0.25)' : 'rgba(234,67,53,0.25)',
+                      },
                     ]}>
-                    {job.status}
-                  </Text>
+                    {done ? (
+                      <CheckCircle size={11} color="#10B981" strokeWidth={2.5} />
+                    ) : (
+                      <X size={11} color="#EA4335" strokeWidth={2.5} />
+                    )}
+                    <Text
+                      style={[
+                        styles.statusText,
+                        {color: done ? '#10B981' : '#EA4335'},
+                      ]}>
+                      {job.status}
+                    </Text>
+                  </View>
                 </View>
-              </View>
 
-              {/* Info rows */}
-              <View style={styles.jobInfoRows}>
-                <View style={styles.infoRow}>
-                  <MapPin size={13} color={Colors.GreyText} strokeWidth={1.8} />
-                  <Text style={styles.infoText}>{job.location}</Text>
+                {/* Info rows */}
+                <View style={styles.jobInfoRows}>
+                  <View style={styles.infoRow}>
+                    <MapPin size={13} color={Colors.GreyText} strokeWidth={1.8} />
+                    <Text style={styles.infoText}>{job.location}</Text>
+                  </View>
+                  <View style={styles.infoRow}>
+                    <Star size={13} color="#F59E0B" fill="#F59E0B" strokeWidth={1.5} />
+                    <Text style={styles.infoText}>
+                      {job.customer} · {job.customerRating} rating
+                    </Text>
+                  </View>
                 </View>
-                <View style={styles.infoRow}>
-                  <Star size={13} color="#F59E0B" fill="#F59E0B" strokeWidth={1.5} />
-                  <Text style={styles.infoText}>
-                    {job.customer} · {job.customerRating} rating
-                  </Text>
+
+                <View style={styles.jobFooter}>
+                  <Text style={styles.jobAmount}>{job.amount}</Text>
+                  <View style={styles.detailsBtn}>
+                    <Text style={styles.detailsBtnText}>Details</Text>
+                    <ChevronRight size={14} color="#E8490F" strokeWidth={2.5} />
+                  </View>
                 </View>
-              </View>
+              </TouchableOpacity>
+            );
+          })}
 
-              <View style={styles.jobFooter}>
-                <Text style={styles.jobAmount}>{job.amount}</Text>
-                <View style={styles.detailsBtn}>
-                  <Text style={styles.detailsBtnText}>Details</Text>
-                  <ChevronRight size={14} color="#E8490F" strokeWidth={2.5} />
-                </View>
-              </View>
-            </TouchableOpacity>
-          );
-        })}
+          {filtered.length === 0 && (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyIcon}>📋</Text>
+              <Text style={styles.emptyTitle}>No jobs yet</Text>
+              <Text style={styles.emptySubtitle}>
+                Go online to start receiving job requests
+              </Text>
+            </View>
+          )}
 
-        {filtered.length === 0 && (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyIcon}>📋</Text>
-            <Text style={styles.emptyTitle}>No jobs yet</Text>
-            <Text style={styles.emptySubtitle}>
-              Go online to start receiving job requests
-            </Text>
-          </View>
-        )}
-
-        <View style={{height: 20}} />
-      </ScrollView>
+          <View style={{height: 20}} />
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 };

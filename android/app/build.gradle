@@ -129,3 +129,6 @@ dependencies {
         implementation jscFlavor
     }
 }
+
+// Requires android/app/google-services.json from the Firebase console.
+apply plugin: "com.google.gms.google-services"

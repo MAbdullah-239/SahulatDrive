@@ -13,5 +13,8 @@ export const MainStack = {
     AiDiagnosis: {
       name: 'AiDiagnosis' as const,
     },
+    VoiceAssistant: {
+      name: 'VoiceAssistant' as const,
+    },
   },
 };

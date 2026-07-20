@@ -3,6 +3,7 @@ import React
 import React_RCTAppDelegate
 import ReactAppDependencyProvider
 import GoogleMaps
+import FirebaseCore
 
 @main
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -19,6 +20,12 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     // meta-data — kept as a literal here since Swift can't read .env at
     // compile time without extra build-phase tooling.
     GMSServices.provideAPIKey("AIzaSyAALCd4-WUGx4qZ3Zi0eCmBv2dKKbXhzVo")
+
+    // Requires ios/SahulatDrive/GoogleService-Info.plist from the Firebase
+    // console — drop it in before building, or this silently no-ops.
+    if FirebaseApp.app() == nil {
+      FirebaseApp.configure()
+    }
 
     let delegate = ReactNativeDelegate()
     let factory = RCTReactNativeFactory(delegate: delegate)

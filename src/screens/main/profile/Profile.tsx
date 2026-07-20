@@ -1,7 +1,13 @@
-import React, {useState} from 'react';
-import {useNavigation} from '@react-navigation/native';
-import {useAppDispatch} from '../../../redux/hooks';
+import React, {useCallback, useState} from 'react';
+import {useFocusEffect, useNavigation} from '@react-navigation/native';
+import {useAppDispatch, useAppSelector} from '../../../redux/hooks';
 import {logout} from '../../../redux/slices/authSlice';
+import {
+  getVehicles,
+  addVehicle,
+  updateVehicle,
+  logoutUser,
+} from '../../../requestHandler/api';
 import {
   View,
   Text,
@@ -14,6 +20,7 @@ import {
   TextInput,
   Switch,
   SafeAreaView,
+  ActivityIndicator,
 } from 'react-native';
 import {Colors} from '../../../generalStyles/colors';
 import {FontFamily} from '../../../generalStyles/generalFonts';
@@ -43,15 +50,11 @@ import {
 
 interface Vehicle {
   id: string;
+  make: string;
   model: string;
-  plate: string;
-  year: string;
+  year: number;
+  registration_number: string;
 }
-
-const initialVehicles: Vehicle[] = [
-  {id: 'v1', model: 'Toyota Corolla', plate: 'LHR-4521', year: '2019'},
-  {id: 'v2', model: 'Honda Civic', plate: 'MN-8899', year: '2021'},
-];
 
 const SETTINGS = [
   {
@@ -80,53 +83,90 @@ const SETTINGS = [
 export const Profile: React.FC = () => {
   const navigation = useNavigation<any>();
   const dispatch = useAppDispatch();
-  const [name, setName] = useState('Ahmed Raza');
+  const authUser = useAppSelector(state => state.auth.user);
+  const [name, setName] = useState(authUser?.name ?? '');
   const [isEditingProfile, setIsEditingProfile] = useState(false);
-  const [vehicles, setVehicles] = useState<Vehicle[]>(initialVehicles);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [vehiclesLoading, setVehiclesLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
+  const [savingVehicle, setSavingVehicle] = useState(false);
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
+  const [make, setMake] = useState('');
   const [model, setModel] = useState('');
-  const [plate, setPlate] = useState('');
+  const [registrationNumber, setRegistrationNumber] = useState('');
   const [year, setYear] = useState('');
   const [notifications, setNotifications] = useState(true);
   const [language, setLanguage] = useState<'EN' | 'UR'>('EN');
 
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      setVehiclesLoading(true);
+      getVehicles()
+        .then(({data}: any) => {
+          if (!cancelled) setVehicles(data.vehicles ?? []);
+        })
+        .catch(() => {})
+        .finally(() => {
+          if (!cancelled) setVehiclesLoading(false);
+        });
+      return () => {
+        cancelled = true;
+      };
+    }, []),
+  );
+
   const openAdd = () => {
     setEditingVehicle(null);
+    setMake('');
     setModel('');
-    setPlate('');
+    setRegistrationNumber('');
     setYear('');
     setModalOpen(true);
   };
 
   const openEdit = (v: Vehicle) => {
     setEditingVehicle(v);
+    setMake(v.make);
     setModel(v.model);
-    setPlate(v.plate);
-    setYear(v.year);
+    setRegistrationNumber(v.registration_number);
+    setYear(String(v.year));
     setModalOpen(true);
   };
 
-  const saveVehicle = () => {
-    if (!model.trim() || !plate.trim() || !year.trim()) {
+  const saveVehicle = async () => {
+    if (!make.trim() || !model.trim() || !registrationNumber.trim() || !year.trim()) {
       Alert.alert('Missing Info', 'Please fill in all fields.');
       return;
     }
-    if (editingVehicle) {
-      setVehicles(prev =>
-        prev.map(v =>
-          v.id === editingVehicle.id ? {...v, model, plate, year} : v,
-        ),
-      );
-    } else {
-      setVehicles(prev => [
-        ...prev,
-        {id: `v_${Date.now()}`, model, plate, year},
-      ]);
+    const payload = {
+      make,
+      model,
+      year: Number(year),
+      registration_number: registrationNumber,
+    };
+
+    setSavingVehicle(true);
+    try {
+      if (editingVehicle) {
+        const {data}: any = await updateVehicle(editingVehicle.id, payload);
+        setVehicles(prev =>
+          prev.map(v => (v.id === editingVehicle.id ? data.vehicle : v)),
+        );
+      } else {
+        const {data}: any = await addVehicle(payload);
+        setVehicles(prev => [...prev, data.vehicle]);
+      }
+      setModalOpen(false);
+    } catch (error) {
+      Alert.alert('Something went wrong', 'Could not save this vehicle. Please try again.');
+    } finally {
+      setSavingVehicle(false);
     }
-    setModalOpen(false);
   };
 
+  // No DELETE /vehicles/:id route exists on the backend yet — this only
+  // removes the vehicle from local state, it does not persist server-side.
   const deleteVehicle = (id: string) =>
     Alert.alert('Remove Vehicle', 'Delete this vehicle from your profile?', [
       {text: 'Cancel', style: 'cancel'},
@@ -143,10 +183,20 @@ export const Profile: React.FC = () => {
       'Are you sure you want to sign out of Sahulat Drive?',
       [
         {text: 'Cancel', style: 'cancel'},
-        {text: 'Log Out', style: 'destructive', onPress: () => {
+        {
+          text: 'Log Out',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await logoutUser();
+            } catch (error) {
+              // Cookie may already be expired server-side — proceed with
+              // local sign-out regardless, nothing the user can do about it.
+            }
             dispatch(logout());
-            navigation.reset({ index: 0, routes: [{ name: 'AuthStack' }] });
-          }},
+            navigation.reset({index: 0, routes: [{name: 'AuthStack'}]});
+          },
+        },
       ],
     );
 
@@ -177,7 +227,7 @@ export const Profile: React.FC = () => {
           )}{' '}
           <View style={styles.phoneRow}>
             <Phone size={13} color={Colors.GreyText} strokeWidth={1.8} />
-            <Text style={styles.phoneText}>+92 300 1234567</Text>
+            <Text style={styles.phoneText}>{authUser?.phone ?? '—'}</Text>
           </View>
           <TouchableOpacity
             style={styles.editProfileBtn}
@@ -201,7 +251,11 @@ export const Profile: React.FC = () => {
           </TouchableOpacity>
         </View>
 
-        {vehicles.length === 0 ? (
+        {vehiclesLoading ? (
+          <View style={styles.emptyCard}>
+            <ActivityIndicator color="#E8490F" />
+          </View>
+        ) : vehicles.length === 0 ? (
           <View style={styles.emptyCard}>
             <Car size={28} color={Colors.GreyText} strokeWidth={1.5} />
             <Text style={styles.emptyText}>No vehicles saved yet</Text>
@@ -214,9 +268,13 @@ export const Profile: React.FC = () => {
                   <Car size={22} color="#E8490F" strokeWidth={2} />
                 </View>
                 <View style={styles.vehicleInfo}>
-                  <Text style={styles.vehicleModel}>{v.model}</Text>
+                  <Text style={styles.vehicleModel}>
+                    {v.make} {v.model}
+                  </Text>
                   <View style={styles.vehicleMeta}>
-                    <Text style={styles.vehiclePlate}>{v.plate}</Text>
+                    <Text style={styles.vehiclePlate}>
+                      {v.registration_number}
+                    </Text>
                     <View style={styles.vehicleMetaDot} />
                     <Calendar
                       size={11}
@@ -365,8 +423,15 @@ export const Profile: React.FC = () => {
 
             {[
               {
-                label: 'Car Model / Make',
-                placeholder: 'e.g. Toyota Corolla',
+                label: 'Make',
+                placeholder: 'e.g. Toyota',
+                value: make,
+                setter: setMake,
+                caps: 'sentences' as const,
+              },
+              {
+                label: 'Model',
+                placeholder: 'e.g. Corolla',
                 value: model,
                 setter: setModel,
                 caps: 'sentences' as const,
@@ -374,8 +439,8 @@ export const Profile: React.FC = () => {
               {
                 label: 'License Plate',
                 placeholder: 'e.g. LHR-4521',
-                value: plate,
-                setter: setPlate,
+                value: registrationNumber,
+                setter: setRegistrationNumber,
                 caps: 'characters' as const,
               },
               {
@@ -410,11 +475,18 @@ export const Profile: React.FC = () => {
                 <Text style={ms.cancelBtnText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={ms.saveBtn}
+                style={[ms.saveBtn, savingVehicle && ms.saveBtnDisabled]}
                 onPress={saveVehicle}
-                activeOpacity={0.85}>
-                <Check size={16} color="#FFFFFF" strokeWidth={2.5} />
-                <Text style={ms.saveBtnText}>Save Vehicle</Text>
+                activeOpacity={0.85}
+                disabled={savingVehicle}>
+                {savingVehicle ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <>
+                    <Check size={16} color="#FFFFFF" strokeWidth={2.5} />
+                    <Text style={ms.saveBtnText}>Save Vehicle</Text>
+                  </>
+                )}
               </TouchableOpacity>
             </View>
           </View>
@@ -815,6 +887,9 @@ const ms = StyleSheet.create({
     shadowRadius: 12,
     shadowOffset: {width: 0, height: 4},
     elevation: 5,
+  },
+  saveBtnDisabled: {
+    opacity: 0.6,
   },
   saveBtnText: {
     fontFamily: FontFamily.UrbanistBold,

@@ -10,6 +10,8 @@ import {
   StatusBar,
   KeyboardAvoidingView,
   Platform,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import {Colors} from '../../../generalStyles/colors';
 import {FontFamily} from '../../../generalStyles/generalFonts';
@@ -17,6 +19,7 @@ import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RootStackParamList} from '../../../navigation/authStackNavigation';
 import {AuthStack} from '../../../constants/stack/authStack/authStack';
+import {registerUser} from '../../../requestHandler/api';
 
 // As per backend document:
 // ONE role = provider. Customer is also a role.
@@ -57,16 +60,60 @@ const Signup: React.FC<SignupProps> = ({onBack, onContinue}) => {
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  // Vehicle is optional on the backend, only collected for the customer role
+  const [vehicleMake, setVehicleMake] = useState('');
+  const [vehicleModel, setVehicleModel] = useState('');
+  const [vehicleYear, setVehicleYear] = useState('');
+  const [vehicleRegistration, setVehicleRegistration] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (onContinue) {
       onContinue(selectedRole);
       return;
     }
-    // Navigate to OTP first; after OTP → branch by role
-    navigation.navigate(AuthStack.nestedScreens.VerifyOTP.name, {
-      role: selectedRole,
-    } as never);
+
+    if (!fullName || !phone || !email || !password) {
+      Alert.alert('Missing details', 'Please fill in all fields to continue.');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      await registerUser({
+        name: fullName,
+        email,
+        phone: `+92${phone}`,
+        password,
+        role: selectedRole,
+        ...(selectedRole === 'customer' &&
+        vehicleMake &&
+        vehicleModel &&
+        vehicleYear &&
+        vehicleRegistration
+          ? {
+              vehicle: {
+                make: vehicleMake,
+                model: vehicleModel,
+                year: Number(vehicleYear),
+                registration_number: vehicleRegistration,
+              },
+            }
+          : {}),
+      });
+      // Navigate to OTP first; after OTP → branch by role
+      navigation.navigate(AuthStack.nestedScreens.VerifyOTP.name, {
+        role: selectedRole,
+        phone: `+92${phone}`,
+      } as never);
+    } catch (error) {
+      Alert.alert(
+        'Registration failed',
+        'Could not create your account. Please check your details and try again.',
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleBack = () => {
@@ -223,16 +270,87 @@ const Signup: React.FC<SignupProps> = ({onBack, onContinue}) => {
                 </TouchableOpacity>
               </View>
             </View>
+
+            {/* Vehicle details — optional, customer role only */}
+            {selectedRole === 'customer' && (
+              <>
+                <Text style={styles.sectionLabel}>Your Vehicle (optional)</Text>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Make</Text>
+                  <View style={styles.inputWrapper}>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Toyota"
+                      placeholderTextColor={Colors.Grey}
+                      selectionColor="#E8490F"
+                      value={vehicleMake}
+                      onChangeText={setVehicleMake}
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Model</Text>
+                  <View style={styles.inputWrapper}>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Corolla"
+                      placeholderTextColor={Colors.Grey}
+                      selectionColor="#E8490F"
+                      value={vehicleModel}
+                      onChangeText={setVehicleModel}
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Year</Text>
+                  <View style={styles.inputWrapper}>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="2020"
+                      placeholderTextColor={Colors.Grey}
+                      keyboardType="number-pad"
+                      selectionColor="#E8490F"
+                      value={vehicleYear}
+                      onChangeText={setVehicleYear}
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Registration Number</Text>
+                  <View style={styles.inputWrapper}>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="NEW-001"
+                      placeholderTextColor={Colors.Grey}
+                      autoCapitalize="characters"
+                      selectionColor="#E8490F"
+                      value={vehicleRegistration}
+                      onChangeText={setVehicleRegistration}
+                    />
+                  </View>
+                </View>
+              </>
+            )}
           </View>
 
           {/* ── Action Button ── */}
           <TouchableOpacity
-            style={styles.primaryBtn}
+            style={[styles.primaryBtn, submitting && styles.primaryBtnDisabled]}
             onPress={handleContinue}
-            activeOpacity={0.85}>
-            <Text style={styles.primaryBtnText}>
-              Continue {selectedRole === 'provider' ? '→ Select Services' : '→'}
-            </Text>
+            activeOpacity={0.85}
+            disabled={submitting}>
+            {submitting ? (
+              <ActivityIndicator color={Colors.White} />
+            ) : (
+              <Text style={styles.primaryBtnText}>
+                Continue{' '}
+                {selectedRole === 'provider' ? '→ Select Services' : '→'}
+              </Text>
+            )}
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -450,6 +568,9 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     shadowOffset: {width: 0, height: 6},
     elevation: 8,
+  },
+  primaryBtnDisabled: {
+    opacity: 0.6,
   },
   primaryBtnText: {
     fontFamily: FontFamily.UrbanistBold,

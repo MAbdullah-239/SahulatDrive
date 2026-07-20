@@ -8,12 +8,15 @@ import {
   ScrollView,
   StatusBar,
   Platform,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import {Colors} from '../../../generalStyles/colors';
 import {FontFamily} from '../../../generalStyles/generalFonts';
 import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {AuthStack} from '../../../constants/stack/authStack/authStack';
+import {setProviderType} from '../../../requestHandler/api';
 
 // Service categories as defined in backend document
 const SERVICE_CATEGORIES = [
@@ -28,44 +31,13 @@ const SERVICE_CATEGORIES = [
     bg: 'rgba(232,73,15,0.1)',
   },
   {
-    id: 'battery_jump',
-    name: 'battery_jump' as const,
-    label: 'Battery Jump',
-    icon: '🔋',
-    description: 'Jump-start dead batteries or replace them on-site.',
-    requiresTruck: false,
-    color: '#F59E0B',
-    bg: 'rgba(245,158,11,0.1)',
-  },
-  {
-    id: 'fuel_delivery',
-    name: 'fuel_delivery' as const,
-    label: 'Fuel Delivery',
-    icon: '⛽',
-    description: 'Deliver fuel to customers who have run out on the road.',
-    requiresTruck: false,
-    color: '#10B981',
-    bg: 'rgba(16,185,129,0.1)',
-  },
-  {
-    id: 'tire_change',
-    name: 'tire_change' as const,
-    label: 'Tyre Change',
-    icon: '⚙️',
-    description: 'Change flat tyres and fit spare wheels on-site.',
-    requiresTruck: false,
+    id: 'mechanic',
+    name: 'mechanic',
+    label: 'Workshop / Mechanic',
+    icon: '🔧',
+    description: 'Provide on-site repairs or workshop maintenance services.',
     color: '#3B82F6',
     bg: 'rgba(59,130,246,0.1)',
-  },
-  {
-    id: 'locksmith',
-    name: 'locksmith' as const,
-    label: 'Locksmith',
-    icon: '🔑',
-    description: 'Unlock vehicles for customers locked out of their cars.',
-    requiresTruck: false,
-    color: '#8B5CF6',
-    bg: 'rgba(139,92,246,0.1)',
   },
 ];
 
@@ -78,6 +50,7 @@ type ParamList = {
 const ProviderSelectServices: React.FC = () => {
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const [selected, setSelected] = useState<string[]>([]);
+  const [submitting, setSubmitting] = useState(false);
 
   const toggle = (id: string) => {
     setSelected(prev =>
@@ -86,18 +59,38 @@ const ProviderSelectServices: React.FC = () => {
   };
 
   const needsTowTruck = selected.includes('towing');
-  const canContinue = selected.length > 0;
+  const canContinue = selected.length > 0 && !submitting;
 
-  const handleContinue = () => {
-    if (needsTowTruck) {
-      navigation.navigate(AuthStack.nestedScreens.ProviderAddTowTruck.name, {
-        categories: selected,
-      });
-    } else {
-      navigation.navigate(
-        AuthStack.nestedScreens.ProviderUploadDocuments.name,
-        {categories: selected},
+  const handleContinue = async () => {
+    // Towing requires a two-person driver setup, so it takes priority over
+    // a plain workshop type when both are selected.
+    const providerType = needsTowTruck ? 'two_driver' : 'workshop';
+
+    setSubmitting(true);
+    try {
+      await setProviderType({provider_type: providerType});
+
+      if (needsTowTruck) {
+        navigation.navigate(AuthStack.nestedScreens.ProviderAddTowTruck.name, {
+          categories: selected,
+        });
+      } else {
+        navigation.navigate(
+          AuthStack.nestedScreens.ProviderUploadDocuments.name,
+          {categories: selected},
+        );
+      }
+    } catch (err: any) {
+      console.error('[ProviderSelectServices]', err?.response?.data ?? err);
+      const backendMessage =
+        err?.response?.data?.error ?? err?.response?.data?.message;
+      Alert.alert(
+        'Something went wrong',
+        backendMessage ??
+          'Could not save your service selection. Please check your connection and try again.',
       );
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -130,7 +123,6 @@ const ProviderSelectServices: React.FC = () => {
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
-
         {/* ── Title ── */}
         <View style={styles.titleArea}>
           <Text style={styles.stepLabel}>Step 1 of 3</Text>
@@ -166,7 +158,6 @@ const ProviderSelectServices: React.FC = () => {
                 ]}
                 onPress={() => toggle(cat.id)}
                 activeOpacity={0.8}>
-
                 {/* Left: icon */}
                 <View style={[styles.iconWrap, {backgroundColor: cat.bg}]}>
                   <Text style={styles.categoryIcon}>{cat.icon}</Text>
@@ -178,7 +169,9 @@ const ProviderSelectServices: React.FC = () => {
                     <Text style={styles.catLabel}>{cat.label}</Text>
                     {cat.requiresTruck && (
                       <View style={styles.truckBadge}>
-                        <Text style={styles.truckBadgeText}>Truck required</Text>
+                        <Text style={styles.truckBadgeText}>
+                          Truck required
+                        </Text>
                       </View>
                     )}
                   </View>
@@ -206,8 +199,9 @@ const ProviderSelectServices: React.FC = () => {
           <View style={styles.truckNote}>
             <Text style={styles.truckNoteIcon}>🚛</Text>
             <Text style={styles.truckNoteText}>
-              Since you selected <Text style={styles.orange}>Towing</Text>, you'll be asked to register
-              your tow truck details in the next step.
+              Since you selected <Text style={styles.orange}>Towing</Text>,
+              you'll be asked to register your tow truck details in the next
+              step.
             </Text>
           </View>
         )}
@@ -221,7 +215,9 @@ const ProviderSelectServices: React.FC = () => {
           <Text style={styles.summaryText}>
             {selected.length === 0
               ? 'No services selected'
-              : `${selected.length} service${selected.length > 1 ? 's' : ''} selected`}
+              : `${selected.length} service${
+                  selected.length > 1 ? 's' : ''
+                } selected`}
           </Text>
         </View>
         <TouchableOpacity
@@ -229,9 +225,15 @@ const ProviderSelectServices: React.FC = () => {
           onPress={handleContinue}
           disabled={!canContinue}
           activeOpacity={0.85}>
-          <Text style={styles.primaryBtnText}>
-            {needsTowTruck ? 'Next → Add Tow Truck' : 'Next → Upload Documents'}
-          </Text>
+          {submitting ? (
+            <ActivityIndicator color={Colors.White} />
+          ) : (
+            <Text style={styles.primaryBtnText}>
+              {needsTowTruck
+                ? 'Next → Add Tow Truck'
+                : 'Next → Upload Documents'}
+            </Text>
+          )}
         </TouchableOpacity>
       </View>
     </SafeAreaView>

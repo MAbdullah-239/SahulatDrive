@@ -28,12 +28,17 @@ import {
 } from 'lucide-react-native';
 import MapView, {Marker, PROVIDER_GOOGLE} from 'react-native-maps';
 import {requestCurrentLocation, Coordinates} from '../../../utils/location';
-import {setProviderOnlineStatus} from '../../../requestHandler/api';
+import {getCurrentUser, setProviderOnlineStatus} from '../../../requestHandler/api';
+import {useAppDispatch, useAppSelector} from '../../../redux/hooks';
+import {setUser} from '../../../redux/slices/authSlice';
+import {setVerified} from '../../../redux/slices/providerSlice';
 
 const DEFAULT_COORDS: Coordinates = {latitude: 31.5204, longitude: 74.3587};
 
 const ProviderHome: React.FC = () => {
   const navigation = useNavigation<any>();
+  const dispatch = useAppDispatch();
+  const {user} = useAppSelector(state => state.auth);
   const [isOnline, setIsOnline] = useState(false);
   const [coords, setCoords] = useState<Coordinates | null>(null);
   const [togglingOnline, setTogglingOnline] = useState(false);
@@ -46,7 +51,24 @@ const ProviderHome: React.FC = () => {
       const location = await requestCurrentLocation();
       setCoords(location);
     })();
-  }, []);
+
+    // Home and Profile share the same auth/provider Redux state as their
+    // single source of truth — this refresh just keeps it current.
+    getCurrentUser()
+      .then(({data}) => {
+        dispatch(
+          setUser({
+            id: data.user.id,
+            name: data.user.name,
+            email: data.user.email,
+            phone: data.user.phone,
+            role: data.user.role as 'customer' | 'provider',
+          }),
+        );
+        dispatch(setVerified(data.user.status === 'active'));
+      })
+      .catch(() => {});
+  }, [dispatch]);
 
   const handleToggleOnline = async (goOnline: boolean) => {
     setTogglingOnline(true);
@@ -63,14 +85,28 @@ const ProviderHome: React.FC = () => {
         }
         setCoords(liveCoords);
       }
-      await setProviderOnlineStatus({
-        is_online: goOnline,
-        current_lat: liveCoords?.latitude,
-        current_lng: liveCoords?.longitude,
-      });
+      await setProviderOnlineStatus(
+        goOnline
+          ? {
+              is_online: true,
+              current_lat: liveCoords?.latitude,
+              current_lng: liveCoords?.longitude,
+            }
+          : {is_online: false},
+      );
       setIsOnline(goOnline);
-    } catch (error) {
-      Alert.alert('Something went wrong', 'Could not update your status. Please try again.');
+    } catch (error: any) {
+      console.warn(
+        '[provider/online] failed:',
+        error?.response?.status,
+        error?.response?.data ?? error?.message,
+      );
+      Alert.alert(
+        'Something went wrong',
+        error?.response?.data?.errors?.join(', ') ??
+          error?.response?.data?.error ??
+          'Could not update your status. Please try again.',
+      );
     } finally {
       setTogglingOnline(false);
     }
@@ -117,7 +153,7 @@ const ProviderHome: React.FC = () => {
               <Text style={styles.greetingText}>
                 {isOnline ? "🟢 You're Online" : "🔴 You're Offline"}
               </Text>
-              <Text style={styles.userName}>Hassan Tow Services</Text>
+              <Text style={styles.userName}>{user?.name}</Text>
             </View>
             <View style={styles.headerRight}>
               <TouchableOpacity style={styles.iconBtn} activeOpacity={0.7}>

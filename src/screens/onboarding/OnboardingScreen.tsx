@@ -156,7 +156,15 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
           {/* Sign In link */}
           <View style={styles.signInRow}>
             <Text style={styles.signInLabel}>Already have an account? </Text>
-            <TouchableOpacity onPress={onSignIn} activeOpacity={0.7}>
+            <TouchableOpacity
+              onPress={() => {
+                if (onSignIn) {
+                  onSignIn();
+                } else {
+                  navigation.navigate(AuthStack.nestedScreens.Login.name);
+                }
+              }}
+              activeOpacity={0.7}>
               <Text style={styles.signInLink}>Sign In</Text>
             </TouchableOpacity>
           </View>

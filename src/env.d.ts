@@ -1,6 +1,7 @@
 declare module '@env' {
   export const GOOGLE_MAPS_API_KEY: string;
   export const API_BASE_URL: string;
+  export const RAG_API_BASE_URL: string;
   export const FIREBASE_API_KEY: string;
   export const FIREBASE_PROJECT_ID: string;
   export const FIREBASE_APP_ID: string;

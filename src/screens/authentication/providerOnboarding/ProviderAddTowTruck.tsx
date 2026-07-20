@@ -9,18 +9,19 @@ import {
   StatusBar,
   Platform,
   TextInput,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import {Colors} from '../../../generalStyles/colors';
 import {FontFamily} from '../../../generalStyles/generalFonts';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {AuthStack} from '../../../constants/stack/authStack/authStack';
+import {registerTowTruck} from '../../../requestHandler/api';
 
 const TRUCK_TYPES = [
-  {id: 'flatbed', label: 'Flatbed', icon: '🚛'},
-  {id: 'wheel_lift', label: 'Wheel Lift', icon: '🚜'},
-  {id: 'integrated', label: 'Integrated', icon: '🔩'},
-  {id: 'mini', label: 'Mini Truck', icon: '🚐'},
+  {id: 'tow_truck', label: 'Tow Truck', icon: '🚛'},
+  {id: 'pickup', label: ' Pickup Truck', icon: '🚜'},
 ];
 
 const CAPACITY_OPTIONS = [
@@ -41,8 +42,9 @@ const ProviderAddTowTruck: React.FC = () => {
   const [make, setMake] = useState('');
   const [model, setModel] = useState('');
   const [year, setYear] = useState('');
-  const [selectedTruckType, setSelectedTruckType] = useState('flatbed');
+  const [selectedTruckType, setSelectedTruckType] = useState('tow_truck');
   const [selectedCapacity, setSelectedCapacity] = useState('3 ton');
+  const [submitting, setSubmitting] = useState(false);
 
   const isComplete =
     plateNumber.trim().length > 0 &&
@@ -50,18 +52,37 @@ const ProviderAddTowTruck: React.FC = () => {
     model.trim().length > 0 &&
     year.trim().length === 4;
 
-  const handleContinue = () => {
-    navigation.navigate(AuthStack.nestedScreens.ProviderUploadDocuments.name, {
-      categories,
-      towTruck: {
-        plateNumber,
+  const handleContinue = async () => {
+    // Capacity is picked from labels like "5 ton" / "10+ ton" — pull the
+    // leading number out and send it as the plain tons figure the API expects.
+    const capacityTons = parseFloat(selectedCapacity) || 3;
+
+    setSubmitting(true);
+    try {
+      await registerTowTruck({
+        vehicle_type: selectedTruckType,
         make,
         model,
-        year,
-        truckType: selectedTruckType,
-        capacity: selectedCapacity,
-      },
-    });
+        plate_number: plateNumber,
+        capacity_tons: capacityTons,
+      });
+
+      navigation.navigate(
+        AuthStack.nestedScreens.ProviderUploadDocuments.name,
+        {categories},
+      );
+    } catch (err: any) {
+      console.error('[ProviderAddTowTruck]', err?.response?.data ?? err);
+      const backendMessage =
+        err?.response?.data?.error ?? err?.response?.data?.message;
+      Alert.alert(
+        'Something went wrong',
+        backendMessage ??
+          'Could not register your tow truck. Please check your connection and try again.',
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -238,11 +259,18 @@ const ProviderAddTowTruck: React.FC = () => {
       {/* ── Bottom CTA ── */}
       <View style={styles.bottomContainer}>
         <TouchableOpacity
-          style={[styles.primaryBtn, !isComplete && styles.primaryBtnDisabled]}
+          style={[
+            styles.primaryBtn,
+            (!isComplete || submitting) && styles.primaryBtnDisabled,
+          ]}
           onPress={handleContinue}
-          disabled={!isComplete}
+          disabled={!isComplete || submitting}
           activeOpacity={0.85}>
-          <Text style={styles.primaryBtnText}>Next → Upload Documents</Text>
+          {submitting ? (
+            <ActivityIndicator color={Colors.White} />
+          ) : (
+            <Text style={styles.primaryBtnText}>Next → Upload Documents</Text>
+          )}
         </TouchableOpacity>
       </View>
     </SafeAreaView>

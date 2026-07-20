@@ -23,6 +23,10 @@ target 'SahulatDrive' do
   pod 'react-native-maps', :path => rn_maps_path
   pod 'react-native-maps/Google', :path => rn_maps_path
 
+  # Firebase's Swift pods (e.g. FirebaseCoreInternal) need module maps for
+  # their ObjC deps to import cleanly when building as static libraries.
+  pod 'GoogleUtilities', :modular_headers => true
+
   use_react_native!(
     :path => config[:reactNativePath],
     :app_path => "#{Pod::Config.instance.installation_root}/.."

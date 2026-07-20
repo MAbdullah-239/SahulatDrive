@@ -9,13 +9,20 @@ import {
   KeyboardAvoidingView,
   Platform,
   StatusBar,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import {Colors} from '../../../generalStyles/colors';
 import {FontFamily} from '../../../generalStyles/generalFonts';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import {RootStackParamList} from '../../../navigation/rootNavigation';
 import {AuthStack} from '../../../constants/stack/authStack/authStack';
+import {verifyRegistrationOtp} from '../../../requestHandler/api';
+import {useAppDispatch} from '../../../redux/hooks';
+import {setUser} from '../../../redux/slices/authSlice';
+import {registerDeviceToken} from '../../../utils/registerDeviceToken';
+
+const OTP_LENGTH = 6;
 
 interface OtpScreenProps {
   onBack?: () => void;
@@ -26,21 +33,39 @@ interface OtpScreenProps {
 const OtpScreen: React.FC<OtpScreenProps> = ({
   onBack,
   onVerify,
-  phoneNumber = '+92 311 2345678',
+  phoneNumber,
 }) => {
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const route = useRoute<any>();
-  const role = route.params?.role || 'customer';
-  const [otp, setOtp] = useState<string[]>(['', '', '', '']);
+  const dispatch = useAppDispatch();
+  const displayPhone = phoneNumber || route.params?.phone || '+92 311 2345678';
+  const [otp, setOtp] = useState<string[]>(new Array(OTP_LENGTH).fill(''));
+  const [verifying, setVerifying] = useState(false);
   const inputs = useRef<Array<TextInput | null>>([]);
 
   const handleOtpChange = (value: string, index: number) => {
+    // SMS autofill (iOS QuickType strip / Android sms-otp) delivers the full
+    // code in one shot to whichever box is focused, not one digit at a time —
+    // detect that and spread it across all boxes instead of only keeping the
+    // last character.
+    if (value.length > 1) {
+      const digits = value.replace(/\D/g, '').slice(0, OTP_LENGTH).split('');
+      const newOtp = new Array(OTP_LENGTH).fill('');
+      digits.forEach((digit, i) => {
+        newOtp[i] = digit;
+      });
+      setOtp(newOtp);
+      const lastFilledIndex = Math.min(digits.length, OTP_LENGTH) - 1;
+      inputs.current[lastFilledIndex]?.focus();
+      return;
+    }
+
     const newOtp = [...otp];
     newOtp[index] = value;
     setOtp(newOtp);
 
     // Move to next input
-    if (value && index < 3) {
+    if (value && index < OTP_LENGTH - 1) {
       inputs.current[index + 1]?.focus();
     }
   };
@@ -52,14 +77,39 @@ const OtpScreen: React.FC<OtpScreenProps> = ({
     }
   };
 
-  const handleVerify = () => {
+  const handleVerify = async () => {
     const otpCode = otp.join('');
-    if (otpCode.length === 4) {
-      if (onVerify) {
-        onVerify(otpCode);
-        return;
-      }
-      if (role === 'provider') {
+    if (otpCode.length !== OTP_LENGTH) {
+      return;
+    }
+    if (onVerify) {
+      onVerify(otpCode);
+      return;
+    }
+
+    setVerifying(true);
+    try {
+      const {data} = await verifyRegistrationOtp({
+        phone: route.params?.phone,
+        otp_code: otpCode,
+      });
+      dispatch(
+        setUser({
+          id: data.user.id,
+          name: data.user.name,
+          email: data.user.email,
+          phone: data.user.phone,
+          role: data.user.role,
+          isVerified: data.user.otp_verified,
+        }),
+      );
+
+      // Session cookie is now set by the verify_registration_otp response —
+      // register this device's FCM token so the backend can push job
+      // notifications to it.
+      await registerDeviceToken();
+
+      if (data.user.role === 'provider') {
         // Provider → go to service selection (still within AuthStack)
         navigation.navigate(
           AuthStack.nestedScreens.ProviderSelectServices.name as never,
@@ -71,6 +121,13 @@ const OtpScreen: React.FC<OtpScreenProps> = ({
           routes: [{name: 'MainStack' as never}],
         });
       }
+    } catch (error) {
+      Alert.alert(
+        'Invalid code',
+        'That OTP is incorrect or has expired. Please try again.',
+      );
+    } finally {
+      setVerifying(false);
     }
   };
 
@@ -100,8 +157,8 @@ const OtpScreen: React.FC<OtpScreenProps> = ({
           <View style={styles.titleContainer}>
             <Text style={styles.title}>OTP Verification</Text>
             <Text style={styles.subtitle}>
-              Enter the 4-digit code sent to you at{'\n'}
-              <Text style={styles.phoneNumber}>{phoneNumber}</Text>
+              Enter the {OTP_LENGTH}-digit code sent to you at{'\n'}
+              <Text style={styles.phoneNumber}>{displayPhone}</Text>
             </Text>
           </View>
 
@@ -117,8 +174,12 @@ const OtpScreen: React.FC<OtpScreenProps> = ({
                 placeholder="-"
                 placeholderTextColor={Colors.Grey}
                 keyboardType="number-pad"
-                maxLength={1}
+                textContentType="oneTimeCode"
+                autoComplete={index === 0 ? 'sms-otp' : 'off'}
+                importantForAutofill={index === 0 ? 'yes' : 'no'}
+                maxLength={OTP_LENGTH}
                 value={digit}
+                editable={!verifying}
                 onChangeText={value => handleOtpChange(value, index)}
                 onKeyPress={e => handleKeyPress(e, index)}
                 ref={input => {
@@ -142,12 +203,17 @@ const OtpScreen: React.FC<OtpScreenProps> = ({
           <TouchableOpacity
             style={[
               styles.primaryBtn,
-              otp.join('').length < 4 && styles.primaryBtnDisabled,
+              (otp.join('').length < OTP_LENGTH || verifying) &&
+                styles.primaryBtnDisabled,
             ]}
             onPress={handleVerify}
             activeOpacity={0.85}
-            disabled={otp.join('').length < 4}>
-            <Text style={styles.primaryBtnText}>Verify →</Text>
+            disabled={otp.join('').length < OTP_LENGTH || verifying}>
+            {verifying ? (
+              <ActivityIndicator color={Colors.White} />
+            ) : (
+              <Text style={styles.primaryBtnText}>Verify →</Text>
+            )}
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -208,21 +274,20 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.UrbanistBold,
     color: Colors.White,
   },
-  /* ── OTP Input Boxes ── */
   otpBoxesContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
+    gap: 10,
     marginBottom: 32,
-    paddingHorizontal: 8,
   },
   otpBox: {
-    width: 65,
-    height: 65,
-    borderRadius: 16,
+    width: 46,
+    height: 58,
+    borderRadius: 14,
     backgroundColor: 'rgba(255,255,255,0.06)',
     borderWidth: 1.5,
     fontFamily: FontFamily.UrbanistBold,
-    fontSize: 28,
+    fontSize: 22,
     color: Colors.White,
     textAlign: 'center',
   },
@@ -249,7 +314,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#E8490F',
   },
-  /* ── Bottom Section ── */
   bottomContainer: {
     paddingHorizontal: 24,
     paddingBottom: Platform.OS === 'ios' ? 40 : 24,

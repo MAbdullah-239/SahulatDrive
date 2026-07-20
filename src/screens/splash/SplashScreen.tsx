@@ -7,7 +7,7 @@ import {
   StatusBar,
   Dimensions,
 } from 'react-native';
-import Svg, {Path, Ellipse, Circle, G, Rect} from 'react-native-svg';
+import Svg, {Path, Ellipse, Circle, Rect, Defs, LinearGradient, Stop} from 'react-native-svg';
 import {FontFamily} from '../../generalStyles/generalFonts';
 
 const {width, height} = Dimensions.get('window');
@@ -17,86 +17,39 @@ interface SplashScreenProps {
 }
 
 /* ─────────────────────────────────────────────────────────────────
-   Pixel-perfect side-profile car icon matching the app icon exactly
+   App icon (wrench-in-pin logo) — matches icon.svg exactly
 ───────────────────────────────────────────────────────────────── */
-const CarSVG: React.FC = () => (
-  <Svg width="90" height="60" viewBox="0 0 90 60">
-    {/* Ground shadow */}
-    <Ellipse cx="45" cy="56" rx="34" ry="4" fill="rgba(0,0,0,0.18)" />
+const LogoSVG: React.FC<{size: number}> = ({size}) => (
+  <Svg width={size} height={size} viewBox="0 0 1024 1024">
+    <Defs>
+      <LinearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <Stop offset="0%" stopColor="#FF8A50" />
+        <Stop offset="55%" stopColor="#F0592A" />
+        <Stop offset="100%" stopColor="#D6401A" />
+      </LinearGradient>
+      <LinearGradient id="glossGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+        <Stop offset="0%" stopColor="#FFFFFF" stopOpacity={0.16} />
+        <Stop offset="100%" stopColor="#FFFFFF" stopOpacity={0} />
+      </LinearGradient>
+    </Defs>
 
-    {/* Main car body */}
+    <Rect x={0} y={0} width={1024} height={1024} rx={224} ry={224} fill="url(#bgGrad)" />
+    <Rect x={0} y={0} width={1024} height={512} rx={224} ry={224} fill="url(#glossGrad)" />
+
     <Path
-      d={`
-        M 12 42
-        Q 10 42 10 40
-        L 10 36
-        Q 10 33 13 33
-        L 17 33
-        Q 19 28 24 25
-        L 32 23
-        Q 35 16 42 14
-        L 58 14
-        Q 66 14 70 20
-        L 74 23
-        L 77 23
-        Q 80 23 80 26
-        L 80 36
-        Q 80 40 77 40
-        L 76 40
-        Q 75 33 68 33
-        Q 61 33 60 40
-        L 30 40
-        Q 29 33 22 33
-        Q 15 33 14 40
-        L 12 42 Z
-      `}
+      d="M512,838 C512,838 288,610 288,432 A224,224 0 1,1 736,432 C736,610 512,838 512,838 Z"
       fill="#FFFFFF"
-      stroke="#1A1A1A"
-      strokeWidth="1.2"
     />
+    <Ellipse cx={512} cy={856} rx={86} ry={18} fill="#8A1F00" opacity={0.16} />
 
-    {/* Front windshield pane */}
     <Path
-      d={`M 58 15 Q 65 15 69 21 L 71 23 L 56 23 L 56 16 Z`}
-      fill="#5DCFDC"
-      stroke="#1A1A1A"
-      strokeWidth="0.8"
-    />
-    {/* Rear windshield pane */}
-    <Path
-      d={`M 42 15 L 54 15 L 54 23 L 32 23 Q 35 16 42 15 Z`}
-      fill="#5DCFDC"
-      stroke="#1A1A1A"
-      strokeWidth="0.8"
-    />
-    {/* B-pillar */}
-    <Rect x="54" y="14" width="2.5" height="9.5" fill="#1A1A1A" rx="1" />
-
-    {/* Door crease */}
-    <Path
-      d="M 18 36 Q 45 38 75 35"
-      fill="none"
-      stroke="#E0E0E0"
-      strokeWidth="1"
-      strokeLinecap="round"
+      d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z"
+      fill="#E8491D"
+      transform="translate(374,294) scale(11.5)"
     />
 
-    {/* Yellow fuel cap */}
-    <Circle cx="74" cy="30" r="3" fill="#F5C518" stroke="#D4A000" strokeWidth="0.6" />
-
-    {/* Front wheel */}
-    <G>
-      <Circle cx="22" cy="43" r="10" fill="#1C1C1E" />
-      <Circle cx="22" cy="43" r="5.5" fill="#8E8E93" />
-      <Circle cx="22" cy="43" r="2.5" fill="#B0B0B5" />
-    </G>
-
-    {/* Rear wheel */}
-    <G>
-      <Circle cx="68" cy="43" r="10" fill="#1C1C1E" />
-      <Circle cx="68" cy="43" r="5.5" fill="#8E8E93" />
-      <Circle cx="68" cy="43" r="2.5" fill="#B0B0B5" />
-    </G>
+    <Circle cx={668} cy={330} r={34} fill="#1FA451" />
+    <Circle cx={668} cy={330} r={34} fill="none" stroke="#FFFFFF" strokeWidth={10} />
   </Svg>
 );
 
@@ -133,23 +86,22 @@ const SplashScreen: React.FC<SplashScreenProps> = ({onFinish}) => {
       <Animated.View style={[styles.glow3, {opacity: glowOpacity}]} />
 
       <View style={styles.center}>
-        {/* App icon card */}
+        {/* App icon */}
         <Animated.View style={[
           styles.iconShadow,
           {opacity: logoOpacity, transform: [{scale: logoScale}]},
         ]}>
-          <View style={styles.iconCard}>
-            <CarSVG />
-          </View>
+          <LogoSVG size={116} />
         </Animated.View>
 
-        {/* App name */}
+        {/* App name + tagline */}
         <Animated.View style={[
           styles.textWrap,
           {opacity: textOpacity, transform: [{translateY: textSlide}]},
         ]}>
           <Text style={styles.nameWhite}>Sahulat</Text>
           <Text style={styles.nameOrange}>Drive</Text>
+          <Text style={styles.tagline}>Roadside Assistance, On Demand</Text>
         </Animated.View>
       </View>
     </View>
@@ -203,14 +155,6 @@ const styles = StyleSheet.create({
     shadowOffset: {width: 0, height: 10},
     elevation: 18,
   },
-  iconCard: {
-    width: 116,
-    height: 116,
-    borderRadius: 30,
-    backgroundColor: '#E8490F',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   textWrap: {alignItems: 'center'},
   nameWhite: {
     fontFamily: FontFamily.UrbanistBold,
@@ -225,5 +169,12 @@ const styles = StyleSheet.create({
     color: '#E8490F',
     letterSpacing: 0.3,
     lineHeight: 42,
+  },
+  tagline: {
+    fontFamily: FontFamily.UrbanistRegular,
+    fontSize: 14,
+    color: '#8A8A8E',
+    letterSpacing: 0.4,
+    marginTop: 10,
   },
 });

@@ -1,7 +1,9 @@
-import React from 'react';
+import React, {useEffect} from 'react';
 import {useNavigation} from '@react-navigation/native';
-import {useAppDispatch} from '../../../redux/hooks';
-import {logout} from '../../../redux/slices/authSlice';
+import {useAppDispatch, useAppSelector} from '../../../redux/hooks';
+import {logout, setUser} from '../../../redux/slices/authSlice';
+import {setVerified} from '../../../redux/slices/providerSlice';
+import {getCurrentUser} from '../../../requestHandler/api';
 import {
   View,
   Text,
@@ -30,18 +32,61 @@ import {
 const ProviderProfile: React.FC = () => {
   const navigation = useNavigation<any>();
   const dispatch = useAppDispatch();
+  const {user} = useAppSelector(state => state.auth);
+  const {towTruck, isVerified} = useAppSelector(state => state.provider);
+
+  // Home and Profile share the same auth/provider Redux state as their single
+  // source of truth — this refresh just keeps it current when Profile opens,
+  // it isn't a separate copy of the data.
+  useEffect(() => {
+    getCurrentUser()
+      .then(({data}) => {
+        dispatch(
+          setUser({
+            id: data.user.id,
+            name: data.user.name,
+            email: data.user.email,
+            phone: data.user.phone,
+            role: data.user.role as 'customer' | 'provider',
+          }),
+        );
+        dispatch(setVerified(data.user.status === 'active'));
+      })
+      .catch(() => {
+        // Keep showing whatever's already in Redux from cold start.
+      });
+  }, [dispatch]);
+
   const services = [
     {name: 'Towing', icon: Truck, color: '#E8490F'},
     {name: 'Battery Jump', icon: Battery, color: '#F59E0B'},
     {name: 'Fuel Delivery', icon: Fuel, color: '#10B981'},
   ];
 
+  const vehicleSubtitle = towTruck
+    ? `${towTruck.make} ${towTruck.model} · ${towTruck.plateNumber} · ${towTruck.capacity}`
+    : 'Hino Dutro · LHR-9988 · 3 ton';
+
   const menuItems = [
     {icon: FileText, color: '#3B82F6', label: 'My Documents', subtitle: 'CNIC, License, Business'},
-    {icon: Truck, color: '#E8490F', label: 'My Vehicle', subtitle: 'Hino Dutro · LHR-9988 · 3 ton'},
-    {icon: Shield, color: '#10B981', label: 'Verification Status', subtitle: 'Verified ✓'},
+    {icon: Truck, color: '#E8490F', label: 'My Vehicle', subtitle: vehicleSubtitle},
+    {
+      icon: Shield,
+      color: isVerified ? '#10B981' : '#F59E0B',
+      label: 'Verification Status',
+      subtitle: isVerified ? 'Verified ✓' : 'Pending review',
+    },
     {icon: MapPin, color: '#8B5CF6', label: 'Service Areas', subtitle: 'Lahore — Gulberg, DHA, Johar Town'},
   ];
+
+  const nameInitials = user?.name
+    ? user.name
+        .split(' ')
+        .map(n => n[0])
+        .join('')
+        .slice(0, 2)
+        .toUpperCase()
+    : 'HT';
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -62,15 +107,17 @@ const ProviderProfile: React.FC = () => {
         <View style={styles.profileCard}>
           <View style={styles.avatarWrap}>
             <View style={styles.avatar}>
-              <Text style={styles.avatarText}>HT</Text>
+              <Text style={styles.avatarText}>{nameInitials}</Text>
             </View>
-            <View style={styles.verifiedBadge}>
-              <Shield size={12} color="#FFFFFF" strokeWidth={2.5} />
-            </View>
+            {isVerified && (
+              <View style={styles.verifiedBadge}>
+                <Shield size={12} color="#FFFFFF" strokeWidth={2.5} />
+              </View>
+            )}
           </View>
 
-          <Text style={styles.providerName}>Hassan Tow Services</Text>
-          <Text style={styles.providerPhone}>+92 311 2345678</Text>
+          <Text style={styles.providerName}>{user?.name}</Text>
+          <Text style={styles.providerPhone}>{user?.phone}</Text>
 
           {/* Stats Row */}
           <View style={styles.statsRow}>

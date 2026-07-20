@@ -1,4 +1,5 @@
 import GetLocation from 'react-native-get-location';
+import {GOOGLE_MAPS_API_KEY} from '@env';
 
 export interface Coordinates {
   latitude: number;
@@ -23,15 +24,21 @@ const RATIONALE = {
 const CACHE_TTL_MS = 60000;
 let cachedFix: {coords: Coordinates; timestamp: number} | null = null;
 
-export const getCurrentLocation = async (): Promise<Coordinates> => {
-  if (cachedFix && Date.now() - cachedFix.timestamp < CACHE_TTL_MS) {
+export const getCurrentLocation = async (
+  forceRefresh = false,
+): Promise<Coordinates> => {
+  if (
+    !forceRefresh &&
+    cachedFix &&
+    Date.now() - cachedFix.timestamp < CACHE_TTL_MS
+  ) {
     console.log('[location] using cached fix', cachedFix.coords);
     return cachedFix.coords;
   }
 
   console.log('[location] requesting a fresh fix…');
   const location = await GetLocation.getCurrentPosition({
-    enableHighAccuracy: false,
+    enableHighAccuracy: forceRefresh,
     timeout: 8000,
     rationale: RATIONALE,
   });
@@ -49,12 +56,43 @@ export const getCurrentLocation = async (): Promise<Coordinates> => {
  * Convenience wrapper: fetch a fix, swallowing permission-denied/timeout/
  * unavailable errors into null so callers can fall back gracefully instead
  * of wrapping every call site in try/catch.
+ *
+ * Pass forceRefresh=true for anything sent to the backend as "the user's
+ * current position right now" (submitting a help request, going online) —
+ * the 60s cache below is fine for map recentering/UI display, but is exactly
+ * why those calls could look "static": a stale fix from up to a minute ago.
  */
-export const requestCurrentLocation = async (): Promise<Coordinates | null> => {
+export const requestCurrentLocation = async (
+  forceRefresh = false,
+): Promise<Coordinates | null> => {
   try {
-    return await getCurrentLocation();
+    return await getCurrentLocation(forceRefresh);
   } catch (error: any) {
     console.log('[location] failed:', error?.code, error?.message);
+    return null;
+  }
+};
+
+/**
+ * Reverse-geocodes coordinates into a human-readable place name via Google's
+ * Geocoding API (same GOOGLE_MAPS_API_KEY already used for the map SDK).
+ * Returns null on any failure (no key, no network, no results) so callers can
+ * fall back to showing raw coordinates.
+ */
+export const reverseGeocode = async (
+  coords: Coordinates,
+): Promise<string | null> => {
+  try {
+    const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${coords.latitude},${coords.longitude}&key=${GOOGLE_MAPS_API_KEY}`;
+    const response = await fetch(url);
+    const json = await response.json();
+    if (json.status !== 'OK' || !json.results?.length) {
+      console.log('[location] reverse geocode failed:', json.status);
+      return null;
+    }
+    return json.results[0].formatted_address as string;
+  } catch (error) {
+    console.log('[location] reverse geocode error:', error);
     return null;
   }
 };

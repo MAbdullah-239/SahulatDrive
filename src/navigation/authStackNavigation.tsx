@@ -2,6 +2,7 @@ import React from 'react';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import OnboardingScreen from '../screens/onboarding/OnboardingScreen';
 import Signup from '../screens/authentication/signup/signup';
+import Login from '../screens/authentication/login/Login';
 import OtpScreen from '../screens/authentication/otp/OtpScreen';
 import ProviderSelectServices from '../screens/authentication/providerOnboarding/ProviderSelectServices';
 import ProviderAddTowTruck from '../screens/authentication/providerOnboarding/ProviderAddTowTruck';
@@ -12,19 +13,26 @@ import {AuthStack as AuthStackConstants} from '../constants/stack/authStack/auth
 export type RootStackParamList = {
   Onboarding: undefined;
   Signup: undefined;
-  VerifyOTP: {role?: 'customer' | 'provider'};
+  Login: undefined;
+  VerifyOTP: {role?: 'customer' | 'provider'; phone?: string};
   ProviderSelectServices: {role?: string};
   ProviderAddTowTruck: {categories: string[]};
-  ProviderUploadDocuments: {categories: string[]; towTruck?: object};
+  ProviderUploadDocuments: {categories: string[]};
   ProviderPendingApproval: {categories: string[]};
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
-const AuthStackNavigation = () => {
+interface AuthStackNavigationProps {
+  initialRouteName?: keyof RootStackParamList;
+}
+
+const AuthStackNavigation: React.FC<AuthStackNavigationProps> = ({
+  initialRouteName = AuthStackConstants.nestedScreens.Onboarding.name,
+}) => {
   return (
     <Stack.Navigator
-      initialRouteName={AuthStackConstants.nestedScreens.Onboarding.name}
+      initialRouteName={initialRouteName}
       screenOptions={{headerShown: false, animation: 'slide_from_right'}}>
 
       {/* ── Core Auth ── */}
@@ -35,6 +43,10 @@ const AuthStackNavigation = () => {
       <Stack.Screen
         name={AuthStackConstants.nestedScreens.Signup.name}
         component={Signup}
+      />
+      <Stack.Screen
+        name={AuthStackConstants.nestedScreens.Login.name}
+        component={Login}
       />
       <Stack.Screen
         name={AuthStackConstants.nestedScreens.VerifyOTP.name}

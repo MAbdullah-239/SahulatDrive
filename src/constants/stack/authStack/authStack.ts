@@ -7,6 +7,9 @@ export const AuthStack = {
     Signup: {
       name: 'Signup' as const,
     },
+    Login: {
+      name: 'Login' as const,
+    },
     VerifyOTP: {
       name: 'VerifyOTP' as const,
     },

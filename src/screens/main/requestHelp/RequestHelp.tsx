@@ -17,7 +17,11 @@ import {
 import {Colors} from '../../../generalStyles/colors';
 import {FontFamily} from '../../../generalStyles/generalFonts';
 import {useNavigation, useFocusEffect} from '@react-navigation/native';
-import {requestCurrentLocation, Coordinates} from '../../../utils/location';
+import {
+  requestCurrentLocation,
+  reverseGeocode,
+  Coordinates,
+} from '../../../utils/location';
 import {createServiceRequest} from '../../../requestHandler/api';
 
 interface IssueOption {
@@ -49,6 +53,7 @@ const RequestHelp = () => {
   const [notes, setNotes] = useState<string>('');
   const [smsFallback, setSmsFallback] = useState<boolean>(true);
   const [location, setLocation] = useState<Coordinates | null>(null);
+  const [placeName, setPlaceName] = useState<string | null>(null);
   const [locationLoading, setLocationLoading] = useState(true);
   const [locationError, setLocationError] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -56,10 +61,14 @@ const RequestHelp = () => {
   const fetchLocation = useCallback(async () => {
     setLocationLoading(true);
     setLocationError(false);
+    setPlaceName(null);
     const coords = await requestCurrentLocation();
     setLocation(coords);
     setLocationLoading(false);
     setLocationError(!coords);
+    if (coords) {
+      setPlaceName(await reverseGeocode(coords));
+    }
   }, []);
 
   // useFocusEffect (not useEffect-on-mount) + runAfterInteractions: kicking off
@@ -78,18 +87,32 @@ const RequestHelp = () => {
 
   const handleSubmit = async () => {
     if (!location) {
-      Alert.alert('Location required', 'We need your location to request help.');
+      Alert.alert(
+        'Location required',
+        'We need your location to request help.',
+      );
       return;
     }
     const issue = issues.find(i => i.id === selectedIssue);
     setSubmitting(true);
     try {
+      // Re-fetch right before submitting instead of trusting whatever was
+      // cached when the screen loaded — this is what's sent to the backend
+      // and matched against nearby providers, so it must be the user's
+      // actual current position, not a fix from up to a minute ago.
+      const freshLocation = (await requestCurrentLocation(true)) ?? location;
+      const address =
+        (await reverseGeocode(freshLocation)) ??
+        `${freshLocation.latitude.toFixed(
+          5,
+        )}, ${freshLocation.longitude.toFixed(5)}`;
+
       await createServiceRequest({
         service_category_id: selectedIssue,
         description: notes || issue?.label || 'Roadside assistance needed',
-        latitude: location.latitude,
-        longitude: location.longitude,
-        address: `${location.latitude.toFixed(5)}, ${location.longitude.toFixed(5)}`,
+        latitude: freshLocation.latitude,
+        longitude: freshLocation.longitude,
+        address,
         vehicle: MOCK_VEHICLE,
       });
       navigation.goBack();
@@ -112,8 +135,7 @@ const RequestHelp = () => {
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
-          activeOpacity={0.7}
-        >
+          activeOpacity={0.7}>
           <Text style={styles.backIcon}>←</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Request Help</Text>
@@ -123,8 +145,7 @@ const RequestHelp = () => {
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
+        showsVerticalScrollIndicator={false}>
         {/* ── Emergency Mode Active Banner ── */}
         <View style={styles.emergencyBanner}>
           <View style={styles.sosBadge}>
@@ -132,39 +153,51 @@ const RequestHelp = () => {
           </View>
           <View style={styles.bannerTextContainer}>
             <Text style={styles.bannerTitle}>Emergency Mode Active</Text>
-            <Text style={styles.bannerSubtitle}>Mechanics nearby are being alerted</Text>
+            <Text style={styles.bannerSubtitle}>
+              Mechanics nearby are being alerted
+            </Text>
           </View>
         </View>
 
         {/* ── Location Card ── */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <Text style={styles.cardLabel}>📍 Your Location (Auto-detected)</Text>
+            <Text style={styles.cardLabel}>
+              📍 Your Location (Auto-detected)
+            </Text>
           </View>
           {locationLoading ? (
             <View style={styles.locationLoadingRow}>
               <ActivityIndicator color="#E8490F" size="small" />
-              <Text style={styles.locationLoadingText}>Detecting your location…</Text>
+              <Text style={styles.locationLoadingText}>
+                Detecting your location…
+              </Text>
             </View>
           ) : location ? (
             <Text style={styles.coordinates}>
-              {location.latitude.toFixed(4)}° N, {location.longitude.toFixed(4)}° E
+              {placeName ??
+                `${location.latitude.toFixed(
+                  4,
+                )}° N, ${location.longitude.toFixed(4)}° E`}
             </Text>
           ) : (
             <Text style={styles.coordinates}>
-              {locationError ? 'Could not detect location' : 'Location unavailable'}
+              {locationError
+                ? 'Could not detect location'
+                : 'Location unavailable'}
             </Text>
           )}
           {locationError ? (
             <TouchableOpacity
               activeOpacity={0.7}
               style={styles.cardLinkContainer}
-              onPress={fetchLocation}
-            >
+              onPress={fetchLocation}>
               <Text style={styles.cardLinkText}>↻ Retry</Text>
             </TouchableOpacity>
           ) : (
-            <TouchableOpacity activeOpacity={0.7} style={styles.cardLinkContainer}>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              style={styles.cardLinkContainer}>
               <Text style={styles.cardLinkText}>✏️ Correct Location</Text>
             </TouchableOpacity>
           )}
@@ -202,16 +235,20 @@ const RequestHelp = () => {
                   key={item.id}
                   style={[
                     styles.issueGridItem,
-                    isSelected ? styles.issueItemActive : styles.issueItemInactive,
+                    isSelected
+                      ? styles.issueItemActive
+                      : styles.issueItemInactive,
                   ]}
                   onPress={() => setSelectedIssue(item.id)}
-                  activeOpacity={0.8}
-                >
+                  activeOpacity={0.8}>
                   <Text style={styles.issueIcon}>{item.icon}</Text>
-                  <Text style={[
-                    styles.issueLabel,
-                    isSelected ? styles.issueLabelActive : styles.issueLabelInactive,
-                  ]}>
+                  <Text
+                    style={[
+                      styles.issueLabel,
+                      isSelected
+                        ? styles.issueLabelActive
+                        : styles.issueLabelInactive,
+                    ]}>
                     {item.label}
                   </Text>
                 </TouchableOpacity>
@@ -243,7 +280,9 @@ const RequestHelp = () => {
             </View>
             <View>
               <Text style={styles.smsTitle}>Offline SMS Fallback</Text>
-              <Text style={styles.smsSubtitle}>Alert saved contacts via SMS</Text>
+              <Text style={styles.smsSubtitle}>
+                Alert saved contacts via SMS
+              </Text>
             </View>
           </View>
           <Switch
@@ -265,8 +304,7 @@ const RequestHelp = () => {
           style={[styles.primaryBtn, submitting && styles.primaryBtnDisabled]}
           activeOpacity={0.85}
           disabled={submitting}
-          onPress={handleSubmit}
-        >
+          onPress={handleSubmit}>
           {submitting ? (
             <ActivityIndicator color="#FFFFFF" />
           ) : (
@@ -385,6 +423,8 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: Colors.Grey || '#868686',
     marginBottom: 12,
+    flexShrink: 1,
+    flexWrap: 'wrap',
   },
   locationLoadingRow: {
     flexDirection: 'row',

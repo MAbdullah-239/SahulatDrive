@@ -9,6 +9,7 @@ import {
   Platform,
   Animated,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import {Colors} from '../../../generalStyles/colors';
 import {FontFamily} from '../../../generalStyles/generalFonts';
@@ -23,6 +24,7 @@ import {
   Navigation2,
   AlertTriangle,
 } from 'lucide-react-native';
+import {updateServiceRequest} from '../../../requestHandler/api';
 
 // Mock incoming job data
 const MOCK_JOB = {
@@ -47,6 +49,7 @@ const ProviderIncomingJob: React.FC = () => {
   const navigation = useNavigation<any>();
   const [timeLeft, setTimeLeft] = useState(COUNTDOWN_SECONDS);
   const [accepted, setAccepted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const slideAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
@@ -95,16 +98,25 @@ const ProviderIncomingJob: React.FC = () => {
   const progressWidth = `${(timeLeft / COUNTDOWN_SECONDS) * 100}%`;
   const isUrgent = timeLeft <= 10;
 
-  const handleAccept = () => {
-    setAccepted(true);
-    Alert.alert('Job Accepted! 🎉', 'Navigate to the customer now.', [
-      {
-        text: 'Open Map',
-        onPress: () => {
-          navigation.navigate('ProviderActiveJob');
+  const handleAccept = async () => {
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      await updateServiceRequest(MOCK_JOB.id, {status: 'accepted'});
+      setAccepted(true);
+      Alert.alert('Job Accepted! 🎉', 'Navigate to the customer now.', [
+        {
+          text: 'Open Map',
+          onPress: () => {
+            navigation.navigate('ProviderActiveJob', {job: MOCK_JOB});
+          },
         },
-      },
-    ]);
+      ]);
+    } catch (error: any) {
+      Alert.alert('Failed', error?.response?.data?.error ?? 'Could not accept. Try again.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleDecline = () => {
@@ -113,7 +125,14 @@ const ProviderIncomingJob: React.FC = () => {
       {
         text: 'Decline',
         style: 'destructive',
-        onPress: () => navigation.goBack(),
+        onPress: async () => {
+          try {
+            await updateServiceRequest(MOCK_JOB.id, {status: 'cancelled'});
+          } catch (_) {
+            // Best-effort decline
+          }
+          navigation.goBack();
+        },
       },
     ]);
   };

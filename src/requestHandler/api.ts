@@ -5,6 +5,12 @@ import apiClient from './apiClient';
 
 // ─── Auth (session-cookie based, no Bearer token) ───────────────────────────
 
+// Registration is a two-step, cookie-based flow:
+// 1. POST /auth/register — creates a pending account, sends an OTP (currently
+//    delivered to a Discord webhook on the backend for testing), and returns
+//    only {message}. No session cookie yet at this point.
+// 2. POST /auth/verify_registration_otp — takes {phone, otp_code}. Returns the
+//    created {user} on success.
 export const registerUser = (data: {
   name: string;
   email: string;
@@ -17,14 +23,63 @@ export const registerUser = (data: {
     year: number;
     registration_number: string;
   };
-}) => apiClient.post('/auth/register', data);
+}) => apiClient.post<{message: string}>('/auth/register', data);
+
+export const verifyRegistrationOtp = (data: {phone: string; otp_code: string}) =>
+  apiClient.post<{
+    user: {
+      id: string;
+      name: string;
+      email: string;
+      phone: string;
+      role: 'customer' | 'provider';
+      otp_verified: boolean;
+      created_at: string;
+    };
+  }>('/auth/verify_registration_otp', data);
+
+// Confirmed against a real GET /me response for a provider — there is no
+// provider_profile.is_verified field (despite earlier backend guidance);
+// approval is reflected as status: "active" at the top level instead.
+export interface ApiUser {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  role: 'customer' | 'provider' | 'admin';
+  status?: string;
+  provider_type?: string | null;
+  otp_verified?: boolean;
+}
 
 export const loginUser = (data: {login: string; password: string}) =>
-  apiClient.post('/session', data);
+  apiClient.post<{user: ApiUser}>('/session', data);
 
 export const logoutUser = () => apiClient.delete('/session');
 
-export const getCurrentUser = () => apiClient.get('/me');
+export const getCurrentUser = () => apiClient.get<{user: ApiUser}>('/me');
+
+// ─── Device token (FCM) ──────────────────────────────────────────────────────
+// Call immediately after login / OTP verification once the Firebase SDK has
+// provided the FCM token. Requires an active session cookie (Authenticatable).
+export const updateDeviceToken = (fcmToken: string) =>
+  apiClient.patch('/me/device_token', {fcm_token: fcmToken});
+
+// ─── Notifications ───────────────────────────────────────────────────────────
+// apiClient's baseURL already ends in /api/v1 (see .env), so this is just
+// /notifications — do not add the /api/v1 prefix again here.
+export interface ApiNotification {
+  id: string;
+  title: string;
+  message: string;
+  is_read: boolean;
+  created_at: string;
+}
+
+export const getNotifications = () =>
+  apiClient.get<{notifications: ApiNotification[]; unread_count: number}>(
+    '/notifications',
+  );
 
 // ─── Customer Vehicles ───────────────────────────────────────────────────────
 
@@ -82,6 +137,10 @@ export const updateServiceRequest = (
 
 // ─── Provider Status ─────────────────────────────────────────────────────────
 
+export const setProviderType = (data: {
+  provider_type: 'two_driver' | 'workshop';
+}) => apiClient.patch('/provider/type', data);
+
 export const setProviderOnlineStatus = (data: {
   is_online: boolean;
   current_lat?: number;
@@ -90,12 +149,29 @@ export const setProviderOnlineStatus = (data: {
 
 // ─── Provider Documents ──────────────────────────────────────────────────────
 
+// Backend stores the file as an Active Storage attachment ("File must be
+// attached" 422 if it's missing) — this must be multipart/form-data with the
+// actual file, not a JSON file_url string.
 export const uploadProviderDocument = (data: {
   document_type: 'cnic' | 'license' | 'business';
   document_number: string;
-  file_url: string;
+  file: {uri: string; type: string; name: string};
   expiry_date: string;
-}) => apiClient.post('/provider/documents', data);
+}) => {
+  const formData = new FormData();
+  formData.append('document_type', data.document_type);
+  formData.append('document_number', data.document_number);
+  formData.append('expiry_date', data.expiry_date);
+  formData.append('file', {
+    uri: data.file.uri,
+    type: data.file.type,
+    name: data.file.name,
+  } as any);
+
+  return apiClient.post('/provider/documents', formData, {
+    headers: {'Content-Type': 'multipart/form-data'},
+  });
+};
 
 // ─── Provider Vehicles (Tow Truck) ──────────────────────────────────────────
 
