@@ -19,3 +19,8 @@ export const HEIGHT_BASE_RATIO = (value: number): number => {
 export const FONT_SIZE = (value: number): number => {
   return HEIGHT_BASE_RATIO(value);
 };
+export const formatTimer = (seconds: number): string => {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+};

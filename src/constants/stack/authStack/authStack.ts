@@ -13,6 +13,12 @@ export const AuthStack = {
     VerifyOTP: {
       name: 'VerifyOTP' as const,
     },
+    ForgotPassword: {
+      name: 'ForgotPassword' as const,
+    },
+    ResetPassword: {
+      name: 'ResetPassword' as const,
+    },
     ProviderSelectServices: {
       name: 'ProviderSelectServices' as const,
     },
@@ -21,6 +27,9 @@ export const AuthStack = {
     },
     ProviderAddTowTruck: {
       name: 'ProviderAddTowTruck' as const,
+    },
+    ProviderAddWorkshop: {
+      name: 'ProviderAddWorkshop' as const,
     },
     ProviderPendingApproval: {
       name: 'ProviderPendingApproval' as const,

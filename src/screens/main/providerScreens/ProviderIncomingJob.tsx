@@ -24,9 +24,15 @@ import {
   Navigation2,
   AlertTriangle,
 } from 'lucide-react-native';
+import {useRoute} from '@react-navigation/native';
 import {updateServiceRequest} from '../../../requestHandler/api';
+import {
+  loadDismissedAssignmentIds,
+  persistDismissedAssignmentId,
+} from '../../../utils/dismissedJobs';
 
-// Mock incoming job data
+// Dev fallback — only used if this screen is opened without a real job
+// (e.g. navigating here directly during development).
 const MOCK_JOB = {
   id: 'req_001',
   customerName: 'Ahmed Raza',
@@ -47,6 +53,8 @@ const COUNTDOWN_SECONDS = 30;
 
 const ProviderIncomingJob: React.FC = () => {
   const navigation = useNavigation<any>();
+  const route = useRoute<any>();
+  const job = route.params?.job ?? MOCK_JOB;
   const [timeLeft, setTimeLeft] = useState(COUNTDOWN_SECONDS);
   const [accepted, setAccepted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -102,13 +110,13 @@ const ProviderIncomingJob: React.FC = () => {
     if (submitting) return;
     setSubmitting(true);
     try {
-      await updateServiceRequest(MOCK_JOB.id, {status: 'accepted'});
+      await updateServiceRequest(job.id, {status: 'accepted'});
       setAccepted(true);
       Alert.alert('Job Accepted! 🎉', 'Navigate to the customer now.', [
         {
           text: 'Open Map',
           onPress: () => {
-            navigation.navigate('ProviderActiveJob', {job: MOCK_JOB});
+            navigation.navigate('ProviderActiveJob', {job});
           },
         },
       ]);
@@ -119,22 +127,31 @@ const ProviderIncomingJob: React.FC = () => {
     }
   };
 
+  // There's no backend endpoint yet to reject just THIS provider's
+  // assignment — the only status PATCH available acts on the whole
+  // service_request, which would wrongly cancel the customer's job just
+  // because one provider passed on it. Until that endpoint exists, decline
+  // only dismisses it locally (persisted so it survives app restarts — see
+  // utils/dismissedJobs.ts) instead of touching the customer's request at all.
   const handleDecline = () => {
-    Alert.alert('Decline Job?', 'The request will be sent to another provider.', [
-      {text: 'Cancel', style: 'cancel'},
-      {
-        text: 'Decline',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await updateServiceRequest(MOCK_JOB.id, {status: 'cancelled'});
-          } catch (_) {
-            // Best-effort decline
-          }
-          navigation.goBack();
+    Alert.alert(
+      'Decline Job?',
+      "This job won't be assigned to you, but it will stay available for other providers.",
+      [
+        {text: 'Cancel', style: 'cancel'},
+        {
+          text: 'Decline',
+          style: 'destructive',
+          onPress: async () => {
+            if (job.assignmentId) {
+              const dismissed = await loadDismissedAssignmentIds();
+              await persistDismissedAssignmentId(job.assignmentId, dismissed);
+            }
+            navigation.goBack();
+          },
         },
-      },
-    ]);
+      ],
+    );
   };
 
   const slideY = slideAnim.interpolate({
@@ -173,7 +190,7 @@ const ProviderIncomingJob: React.FC = () => {
             <View style={styles.newJobDot} />
             <Text style={styles.newJobText}>New Job Request</Text>
           </View>
-          <Text style={styles.timeAgo}>{MOCK_JOB.timeAgo}</Text>
+          <Text style={styles.timeAgo}>{job.timeAgo}</Text>
         </View>
 
         {/* ── Countdown Bar ── */}
@@ -197,32 +214,41 @@ const ProviderIncomingJob: React.FC = () => {
         </View>
 
         {/* ── Service Type Card ── */}
-        <View style={[styles.serviceCard, {borderColor: MOCK_JOB.serviceColor + '40'}]}>
-          <View style={[styles.serviceIconWrap, {backgroundColor: MOCK_JOB.serviceColor + '18'}]}>
-            <Text style={styles.serviceIcon}>{MOCK_JOB.serviceIcon}</Text>
+        <View style={[styles.serviceCard, {borderColor: job.serviceColor + '40'}]}>
+          <View style={[styles.serviceIconWrap, {backgroundColor: job.serviceColor + '18'}]}>
+            <Text style={styles.serviceIcon}>{job.serviceIcon}</Text>
           </View>
           <View style={styles.serviceInfo}>
-            <Text style={styles.serviceLabel}>{MOCK_JOB.serviceLabel}</Text>
-            <Text style={[styles.serviceCategory, {color: MOCK_JOB.serviceColor}]}>
-              {MOCK_JOB.serviceType}
+            <Text style={styles.serviceLabel}>{job.serviceLabel}</Text>
+            <Text style={[styles.serviceCategory, {color: job.serviceColor}]}>
+              {job.serviceType}
             </Text>
           </View>
-          <Text style={styles.servicePrice}>{MOCK_JOB.price}</Text>
+          <Text style={styles.servicePrice}>{job.price}</Text>
         </View>
 
         {/* ── Customer Info ── */}
         <View style={styles.customerCard}>
           <View style={styles.customerAvatar}>
-            <Text style={styles.customerInitials}>AR</Text>
+            <Text style={styles.customerInitials}>
+              {(job.customerName ?? 'C')
+                .split(' ')
+                .map((w: string) => w[0])
+                .join('')
+                .slice(0, 2)
+                .toUpperCase()}
+            </Text>
             <View style={styles.verifiedDot} />
           </View>
           <View style={styles.customerInfo}>
-            <Text style={styles.customerName}>{MOCK_JOB.customerName}</Text>
-            <View style={styles.ratingRow}>
-              <Star size={12} color="#F59E0B" fill="#F59E0B" strokeWidth={1.5} />
-              <Text style={styles.ratingText}>{MOCK_JOB.customerRating}</Text>
-              <Text style={styles.ratingLabel}>Customer rating</Text>
-            </View>
+            <Text style={styles.customerName}>{job.customerName}</Text>
+            {job.customerRating != null ? (
+              <View style={styles.ratingRow}>
+                <Star size={12} color="#F59E0B" fill="#F59E0B" strokeWidth={1.5} />
+                <Text style={styles.ratingText}>{job.customerRating}</Text>
+                <Text style={styles.ratingLabel}>Customer rating</Text>
+              </View>
+            ) : null}
           </View>
           <TouchableOpacity style={styles.callBtn} activeOpacity={0.8}>
             <Phone size={18} color="#10B981" strokeWidth={2} />
@@ -237,7 +263,7 @@ const ProviderIncomingJob: React.FC = () => {
             </View>
             <View style={styles.infoContent}>
               <Text style={styles.infoLabel}>Customer Location</Text>
-              <Text style={styles.infoValue}>{MOCK_JOB.location}</Text>
+              <Text style={styles.infoValue}>{job.location}</Text>
             </View>
           </View>
 
@@ -250,25 +276,28 @@ const ProviderIncomingJob: React.FC = () => {
             <View style={styles.infoContent}>
               <Text style={styles.infoLabel}>Distance from you</Text>
               <Text style={styles.infoValue}>
-                {MOCK_JOB.distance} · ~{MOCK_JOB.estimatedMinutes} min away
+                {job.distance ?? '—'}
+                {job.estimatedMinutes ? ` · ~${job.estimatedMinutes} min away` : ''}
               </Text>
             </View>
           </View>
         </View>
 
         {/* ── Notes ── */}
-        {MOCK_JOB.notes && (
+        {job.notes ? (
           <View style={styles.notesCard}>
             <Text style={styles.notesLabel}>Customer Notes</Text>
-            <Text style={styles.notesText}>{MOCK_JOB.notes}</Text>
+            <Text style={styles.notesText}>{job.notes}</Text>
           </View>
-        )}
+        ) : null}
 
         {/* Matching rule reminder */}
         <View style={styles.ruleCard}>
           <CheckCircle size={14} color="#10B981" strokeWidth={2} />
           <Text style={styles.ruleText}>
-            This job matches your <Text style={styles.ruleBold}>battery_jump</Text> service category
+            This job matches your{' '}
+            <Text style={styles.ruleBold}>{job.serviceType}</Text> service
+            category
           </Text>
         </View>
 

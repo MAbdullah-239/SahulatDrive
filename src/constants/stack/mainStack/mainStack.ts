@@ -16,5 +16,8 @@ export const MainStack = {
     VoiceAssistant: {
       name: 'VoiceAssistant' as const,
     },
+    LiveTracking: {
+      name: 'LiveTracking' as const,
+    },
   },
 };

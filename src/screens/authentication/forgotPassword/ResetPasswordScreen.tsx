@@ -15,101 +15,72 @@ import {
 } from 'react-native';
 import {Colors} from '../../../generalStyles/colors';
 import {FontFamily} from '../../../generalStyles/generalFonts';
-import {useNavigation} from '@react-navigation/native';
+import {useNavigation, useRoute} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RootStackParamList} from '../../../navigation/authStackNavigation';
 import {AuthStack} from '../../../constants/stack/authStack/authStack';
-import {loginUser, getCurrentUser} from '../../../requestHandler/api';
-import {useAppDispatch} from '../../../redux/hooks';
-import {setUser} from '../../../redux/slices/authSlice';
-import {setVerified} from '../../../redux/slices/providerSlice';
-import {registerDeviceToken} from '../../../utils/registerDeviceToken';
-import {
-  resetToProviderStack,
-  resetToMainStack,
-} from '../../../navigation/navigationRef';
+import {forgotPassword, resetPassword} from '../../../requestHandler/api';
 
-interface LoginProps {
-  onBack?: () => void;
-  onSignUp?: () => void;
-}
-
-const Login: React.FC<LoginProps> = ({onBack, onSignUp}) => {
+const ResetPasswordScreen: React.FC = () => {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const dispatch = useAppDispatch();
+  const route = useRoute<any>();
+  const login: string | undefined = route.params?.login;
+
+  const [otpCode, setOtpCode] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [identifier, setIdentifier] = useState('');
-  const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [resending, setResending] = useState(false);
 
-  const handleBack = () => {
-    if (onBack) {
-      onBack();
-    } else {
-      navigation.goBack();
+  const handleSubmit = async () => {
+    if (!otpCode.trim()) {
+      Alert.alert('Missing code', 'Enter the code we sent you.');
+      return;
     }
-  };
-
-  const handleSignUp = () => {
-    if (onSignUp) {
-      onSignUp();
-    } else {
-      navigation.navigate(AuthStack.nestedScreens.Signup.name as never);
+    if (newPassword.length < 6) {
+      Alert.alert('Weak password', 'Password must be at least 6 characters.');
+      return;
     }
-  };
-
-  const handleLogin = async () => {
-    if (!identifier || !password) {
-      Alert.alert('Missing details', 'Please enter your email/phone and password.');
+    if (newPassword !== confirmPassword) {
+      Alert.alert("Passwords don't match", 'Please re-enter your new password.');
       return;
     }
 
     setSubmitting(true);
     try {
-      await loginUser({login: identifier, password});
-      // POST /session only confirms the cookie is set — GET /me is the
-      // authoritative source for the full user record.
-      const {data} = await getCurrentUser();
-
-      dispatch(
-        setUser({
-          id: data.user.id,
-          name: data.user.name,
-          email: data.user.email,
-          phone: data.user.phone,
-          role: data.user.role as 'customer' | 'provider',
-        }),
-      );
-
-      // Session cookie is now set — register this device's FCM token so the
-      // backend can push job/order notifications to it.
-      await registerDeviceToken();
-
-      if (data.user.role === 'provider') {
-        // status === 'active' is the sole authoritative approval signal
-        // (see ProviderPendingApproval) — a provider logging back in before
-        // admin approval must land back on the waiting screen, not skip
-        // straight to the dashboard just because their role is 'provider'.
-        const isVerified = data.user.status === 'active';
-        dispatch(setVerified(isVerified));
-        if (isVerified) {
-          resetToProviderStack();
-        } else {
-          navigation.navigate(
-            AuthStack.nestedScreens.ProviderPendingApproval.name as never,
-          );
-        }
-      } else {
-        resetToMainStack();
-      }
-    } catch (error) {
+      await resetPassword({otp_code: otpCode.trim(), new_password: newPassword});
+      Alert.alert('Password reset', 'You can now log in with your new password.', [
+        {
+          text: 'Log In',
+          onPress: () =>
+            navigation.reset({
+              index: 0,
+              routes: [{name: AuthStack.nestedScreens.Login.name as never}],
+            }),
+        },
+      ]);
+    } catch (error: any) {
       Alert.alert(
-        'Login failed',
-        'Incorrect email/phone or password. Please try again.',
+        'Could not reset password',
+        error?.response?.data?.error ?? 'That code is incorrect or has expired.',
       );
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleResend = async () => {
+    if (!login || resending) return;
+    setResending(true);
+    try {
+      await forgotPassword({login});
+      Alert.alert('Code sent', 'A new code is on its way.');
+    } catch (error: any) {
+      Alert.alert('Could not resend', 'Please try again in a moment.');
+    } finally {
+      setResending(false);
     }
   };
 
@@ -122,36 +93,39 @@ const Login: React.FC<LoginProps> = ({onBack, onSignUp}) => {
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}>
-          {/* ── Header ── */}
-          <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}>
             <Text style={styles.backIcon}>←</Text>
           </TouchableOpacity>
 
-          {/* ── Title Area ── */}
           <View style={styles.titleContainer}>
-            <Text style={styles.title}>Welcome Back</Text>
-            <Text style={styles.subtitle}>Log in to continue to Sahulat Drive</Text>
+            <Text style={styles.title}>Reset Password</Text>
+            <Text style={styles.subtitle}>
+              Enter the code {login ? `sent to ${login}` : 'we sent you'} along
+              with your new password.
+            </Text>
           </View>
 
-          {/* ── Form Fields ── */}
           <View style={styles.formContainer}>
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Email or Phone</Text>
+              <Text style={styles.label}>Reset Code</Text>
               <View style={styles.inputWrapper}>
                 <TextInput
                   style={styles.input}
-                  placeholder="ahmed@email.com or +92311..."
+                  placeholder="123456"
                   placeholderTextColor={Colors.Grey}
-                  autoCapitalize="none"
+                  keyboardType="number-pad"
                   selectionColor="#E8490F"
-                  value={identifier}
-                  onChangeText={setIdentifier}
+                  value={otpCode}
+                  onChangeText={setOtpCode}
+                  editable={!submitting}
                 />
               </View>
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Password</Text>
+              <Text style={styles.label}>New Password</Text>
               <View style={styles.inputWrapper}>
                 <TextInput
                   style={styles.inputPassword}
@@ -159,8 +133,9 @@ const Login: React.FC<LoginProps> = ({onBack, onSignUp}) => {
                   placeholderTextColor={Colors.Grey}
                   secureTextEntry={!showPassword}
                   selectionColor="#E8490F"
-                  value={password}
-                  onChangeText={setPassword}
+                  value={newPassword}
+                  onChangeText={setNewPassword}
+                  editable={!submitting}
                 />
                 <TouchableOpacity
                   style={styles.eyeIconContainer}
@@ -172,44 +147,57 @@ const Login: React.FC<LoginProps> = ({onBack, onSignUp}) => {
               </View>
             </View>
 
-            <TouchableOpacity
-              style={styles.forgotPasswordLink}
-              activeOpacity={0.7}
-              onPress={() =>
-                navigation.navigate(
-                  AuthStack.nestedScreens.ForgotPassword.name as never,
-                )
-              }>
-              <Text style={styles.forgotPasswordText}>Forgot password?</Text>
-            </TouchableOpacity>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Confirm New Password</Text>
+              <View style={styles.inputWrapper}>
+                <TextInput
+                  style={styles.inputPassword}
+                  placeholder="••••••••"
+                  placeholderTextColor={Colors.Grey}
+                  secureTextEntry={!showPassword}
+                  selectionColor="#E8490F"
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  editable={!submitting}
+                />
+              </View>
+            </View>
           </View>
 
-          {/* ── Action Button ── */}
           <TouchableOpacity
             style={[styles.primaryBtn, submitting && styles.primaryBtnDisabled]}
-            onPress={handleLogin}
+            onPress={handleSubmit}
             activeOpacity={0.85}
             disabled={submitting}>
             {submitting ? (
               <ActivityIndicator color={Colors.White} />
             ) : (
-              <Text style={styles.primaryBtnText}>Log In →</Text>
+              <Text style={styles.primaryBtnText}>Reset Password →</Text>
             )}
           </TouchableOpacity>
 
-          <View style={styles.signUpRow}>
-            <Text style={styles.signUpLabel}>Don't have an account? </Text>
-            <TouchableOpacity onPress={handleSignUp} activeOpacity={0.7}>
-              <Text style={styles.signUpLink}>Sign Up</Text>
-            </TouchableOpacity>
-          </View>
+          {login ? (
+            <View style={styles.resendRow}>
+              <Text style={styles.resendLabel}>Didn't get a code? </Text>
+              <TouchableOpacity
+                onPress={handleResend}
+                activeOpacity={0.7}
+                disabled={resending}>
+                {resending ? (
+                  <ActivityIndicator size="small" color="#E8490F" />
+                ) : (
+                  <Text style={styles.resendLink}>Resend</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          ) : null}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
 
-export default Login;
+export default ResetPasswordScreen;
 
 const styles = StyleSheet.create({
   safeArea: {
@@ -252,18 +240,11 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.UrbanistRegular,
     fontSize: 15,
     color: Colors.GreyText,
+    lineHeight: 22,
   },
   formContainer: {
     gap: 20,
     marginBottom: 32,
-  },
-  forgotPasswordLink: {
-    alignSelf: 'flex-end',
-  },
-  forgotPasswordText: {
-    fontFamily: FontFamily.UrbanistSemiBold,
-    fontSize: 14,
-    color: '#E8490F',
   },
   inputGroup: {
     gap: 8,
@@ -326,17 +307,17 @@ const styles = StyleSheet.create({
     color: Colors.White,
     letterSpacing: 0.3,
   },
-  signUpRow: {
+  resendRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  signUpLabel: {
+  resendLabel: {
     fontFamily: FontFamily.UrbanistRegular,
     fontSize: 14,
     color: Colors.GreyText,
   },
-  signUpLink: {
+  resendLink: {
     fontFamily: FontFamily.UrbanistBold,
     fontSize: 14,
     color: '#E8490F',

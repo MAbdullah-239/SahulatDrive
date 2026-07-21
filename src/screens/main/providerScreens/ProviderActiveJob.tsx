@@ -27,7 +27,10 @@ import {
   MessageSquare,
 } from 'lucide-react-native';
 import MapView, {Marker, Polyline, PROVIDER_GOOGLE} from 'react-native-maps';
-import {updateServiceRequest} from '../../../requestHandler/api';
+import {updateServiceRequest, pingProviderLocation} from '../../../requestHandler/api';
+import {requestCurrentLocation, haversineKm} from '../../../utils/location';
+
+const LOCATION_PING_INTERVAL_MS = 7000;
 
 const MOCK_ACTIVE_JOB = {
   id: 'req_001',
@@ -54,6 +57,42 @@ const ProviderActiveJob: React.FC = () => {
   const job = route.params?.job ?? MOCK_ACTIVE_JOB;
   const [jobStatus, setJobStatus] = useState<'accepted' | 'arrived' | 'started' | 'completed'>('accepted');
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [providerCoords, setProviderCoords] = useState(job.providerCoords ?? null);
+
+  // Pushes this provider's live position for the customer to poll, for as
+  // long as the job is active. Also keeps it in local state so this screen's
+  // own map/distance/ETA reflect the provider's real position instead of the
+  // static coords the job was opened with. Errors are swallowed rather than
+  // surfaced to the provider — a dropped location ping shouldn't interrupt
+  // the job flow, the next interval tick just tries again.
+  useEffect(() => {
+    if (jobStatus === 'completed') return;
+    const pingLocation = async () => {
+      const coords = await requestCurrentLocation(true);
+      if (!coords) return;
+      setProviderCoords(coords);
+      try {
+        await pingProviderLocation(coords);
+      } catch (error: any) {
+        console.log(
+          '[ProviderActiveJob] pingProviderLocation failed:',
+          error?.response?.status,
+          error?.response?.data ?? error?.message,
+        );
+      }
+    };
+    pingLocation();
+    const id = setInterval(pingLocation, LOCATION_PING_INTERVAL_MS);
+    return () => clearInterval(id);
+  }, [jobStatus]);
+
+  const customerCoords = job.customerCoords ?? MOCK_ACTIVE_JOB.customerCoords;
+  const distanceKm =
+    providerCoords && customerCoords
+      ? haversineKm(providerCoords, customerCoords)
+      : null;
+  const etaMinutes =
+    distanceKm != null ? Math.max(1, Math.round((distanceKm / 30) * 60)) : null;
 
   // Map local stepper states to the API's status enum
   const NEXT_API_STATUS: Record<string, 'on_the_way' | 'completed'> = {
@@ -138,32 +177,36 @@ const ProviderActiveJob: React.FC = () => {
         style={StyleSheet.absoluteFillObject}
         userInterfaceStyle="dark"
         initialRegion={{
-          latitude: 31.5179,
-          longitude: 74.3557,
+          latitude: customerCoords.latitude,
+          longitude: customerCoords.longitude,
           latitudeDelta: 0.015,
           longitudeDelta: 0.015,
         }}>
         {/* Customer Marker */}
-        <Marker coordinate={job.customerCoords ?? MOCK_ACTIVE_JOB.customerCoords}>
+        <Marker coordinate={customerCoords}>
           <View style={styles.customerMarker}>
             <Text style={styles.markerEmoji}>🚗</Text>
           </View>
         </Marker>
 
-        {/* Provider Marker */}
-        <Marker coordinate={job.providerCoords ?? MOCK_ACTIVE_JOB.providerCoords}>
-          <View style={styles.providerMarker}>
-            <Text style={styles.markerEmoji}>🔧</Text>
-          </View>
-        </Marker>
+        {/* Provider Marker — this provider's real, live-updating position */}
+        {providerCoords ? (
+          <Marker coordinate={providerCoords}>
+            <View style={styles.providerMarker}>
+              <Text style={styles.markerEmoji}>🔧</Text>
+            </View>
+          </Marker>
+        ) : null}
 
         {/* Route line */}
-        <Polyline
-          coordinates={[job.providerCoords ?? MOCK_ACTIVE_JOB.providerCoords, job.customerCoords ?? MOCK_ACTIVE_JOB.customerCoords]}
-          strokeColor="#E8490F"
-          strokeWidth={4}
-          lineDashPattern={[5, 5]}
-        />
+        {providerCoords ? (
+          <Polyline
+            coordinates={[providerCoords, customerCoords]}
+            strokeColor="#E8490F"
+            strokeWidth={4}
+            lineDashPattern={[5, 5]}
+          />
+        ) : null}
       </MapView>
 
       <SafeAreaView style={styles.safeArea} pointerEvents="box-none">
@@ -177,7 +220,9 @@ const ProviderActiveJob: React.FC = () => {
               {jobStatus === 'started' && 'Service in Progress'}
             </Text>
           </View>
-          <Text style={styles.etaText}>{job.eta ?? MOCK_ACTIVE_JOB.eta}</Text>
+          <Text style={styles.etaText}>
+            {etaMinutes != null ? `${etaMinutes} mins` : job.eta ?? MOCK_ACTIVE_JOB.eta}
+          </Text>
         </View>
 
         <View style={styles.spacer} pointerEvents="none" />
@@ -201,7 +246,12 @@ const ProviderActiveJob: React.FC = () => {
                 <Text style={styles.customerName}>{job.customerName ?? MOCK_ACTIVE_JOB.customerName}</Text>
                 <View style={styles.ratingRow}>
                   <Compass size={12} color={Colors.GreyText} strokeWidth={2} />
-                  <Text style={styles.distanceText}>{job.distance ?? MOCK_ACTIVE_JOB.distance} away</Text>
+                  <Text style={styles.distanceText}>
+                    {distanceKm != null
+                      ? `${distanceKm.toFixed(1)} km`
+                      : job.distance ?? MOCK_ACTIVE_JOB.distance}{' '}
+                    away
+                  </Text>
                 </View>
               </View>
               <View style={styles.actionButtons}>

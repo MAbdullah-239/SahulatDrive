@@ -4,8 +4,11 @@ import OnboardingScreen from '../screens/onboarding/OnboardingScreen';
 import Signup from '../screens/authentication/signup/signup';
 import Login from '../screens/authentication/login/Login';
 import OtpScreen from '../screens/authentication/otp/OtpScreen';
+import ForgotPasswordScreen from '../screens/authentication/forgotPassword/ForgotPasswordScreen';
+import ResetPasswordScreen from '../screens/authentication/forgotPassword/ResetPasswordScreen';
 import ProviderSelectServices from '../screens/authentication/providerOnboarding/ProviderSelectServices';
 import ProviderAddTowTruck from '../screens/authentication/providerOnboarding/ProviderAddTowTruck';
+import ProviderAddWorkshop from '../screens/authentication/providerOnboarding/ProviderAddWorkshop';
 import ProviderUploadDocuments from '../screens/authentication/providerOnboarding/ProviderUploadDocuments';
 import ProviderPendingApproval from '../screens/authentication/providerOnboarding/ProviderPendingApproval';
 import {AuthStack as AuthStackConstants} from '../constants/stack/authStack/authStack';
@@ -15,8 +18,11 @@ export type RootStackParamList = {
   Signup: undefined;
   Login: undefined;
   VerifyOTP: {role?: 'customer' | 'provider'; phone?: string};
+  ForgotPassword: undefined;
+  ResetPassword: {login?: string};
   ProviderSelectServices: {role?: string};
-  ProviderAddTowTruck: {categories: string[]};
+  ProviderAddTowTruck: {categories: string[]; needsWorkshop?: boolean};
+  ProviderAddWorkshop: {categories: string[]};
   ProviderUploadDocuments: {categories: string[]};
   ProviderPendingApproval: {categories: string[]};
 };
@@ -52,6 +58,14 @@ const AuthStackNavigation: React.FC<AuthStackNavigationProps> = ({
         name={AuthStackConstants.nestedScreens.VerifyOTP.name}
         component={OtpScreen}
       />
+      <Stack.Screen
+        name={AuthStackConstants.nestedScreens.ForgotPassword.name}
+        component={ForgotPasswordScreen}
+      />
+      <Stack.Screen
+        name={AuthStackConstants.nestedScreens.ResetPassword.name}
+        component={ResetPasswordScreen}
+      />
 
       {/* ── Provider Onboarding Flow ── */}
       <Stack.Screen
@@ -61,6 +75,10 @@ const AuthStackNavigation: React.FC<AuthStackNavigationProps> = ({
       <Stack.Screen
         name={AuthStackConstants.nestedScreens.ProviderAddTowTruck.name}
         component={ProviderAddTowTruck}
+      />
+      <Stack.Screen
+        name={AuthStackConstants.nestedScreens.ProviderAddWorkshop.name}
+        component={ProviderAddWorkshop}
       />
       <Stack.Screen
         name={AuthStackConstants.nestedScreens.ProviderUploadDocuments.name}

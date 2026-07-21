@@ -36,7 +36,7 @@ const CAPACITY_OPTIONS = [
 const ProviderAddTowTruck: React.FC = () => {
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const route = useRoute<any>();
-  const {categories = []} = route.params || {};
+  const {categories = [], needsWorkshop = false} = route.params || {};
 
   const [plateNumber, setPlateNumber] = useState('');
   const [make, setMake] = useState('');
@@ -67,10 +67,16 @@ const ProviderAddTowTruck: React.FC = () => {
         capacity_tons: capacityTons,
       });
 
-      navigation.navigate(
-        AuthStack.nestedScreens.ProviderUploadDocuments.name,
-        {categories},
-      );
+      if (needsWorkshop) {
+        navigation.navigate(AuthStack.nestedScreens.ProviderAddWorkshop.name, {
+          categories,
+        });
+      } else {
+        navigation.navigate(
+          AuthStack.nestedScreens.ProviderUploadDocuments.name,
+          {categories},
+        );
+      }
     } catch (err: any) {
       console.error('[ProviderAddTowTruck]', err?.response?.data ?? err);
       const backendMessage =
@@ -269,7 +275,9 @@ const ProviderAddTowTruck: React.FC = () => {
           {submitting ? (
             <ActivityIndicator color={Colors.White} />
           ) : (
-            <Text style={styles.primaryBtnText}>Next → Upload Documents</Text>
+            <Text style={styles.primaryBtnText}>
+              {needsWorkshop ? 'Next → Set Up Workshop' : 'Next → Upload Documents'}
+            </Text>
           )}
         </TouchableOpacity>
       </View>

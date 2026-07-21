@@ -3,12 +3,14 @@ import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import ProviderBottomTabNavigation from './providerBottomTabNavigation';
 import ProviderIncomingJob from '../screens/main/providerScreens/ProviderIncomingJob';
 import ProviderActiveJob from '../screens/main/providerScreens/ProviderActiveJob';
+import ProviderWorkshopBookings from '../screens/main/providerScreens/ProviderWorkshopBookings';
 import {ProviderStack as ProviderStackConstants} from '../constants/stack/providerStack/providerStack';
 
 export type ProviderStackParamList = {
   ProviderTabs: undefined;
-  ProviderIncomingJob: undefined;
-  ProviderActiveJob: undefined;
+  ProviderIncomingJob: {job?: any} | undefined;
+  ProviderActiveJob: {job?: any} | undefined;
+  ProviderWorkshopBookings: undefined;
 };
 
 const Stack = createNativeStackNavigator<ProviderStackParamList>();
@@ -27,6 +29,10 @@ const ProviderStackNavigation = () => {
       <Stack.Screen
         name={ProviderStackConstants.nestedScreens.ProviderActiveJob.name}
         component={ProviderActiveJob}
+      />
+      <Stack.Screen
+        name={ProviderStackConstants.nestedScreens.ProviderWorkshopBookings.name}
+        component={ProviderWorkshopBookings}
       />
     </Stack.Navigator>
   );

@@ -1,4 +1,4 @@
-import React, {useEffect, useRef} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import {
   View,
   Text,
@@ -11,23 +11,32 @@ import {
 } from 'react-native';
 import {Colors} from '../../../generalStyles/colors';
 import {FontFamily} from '../../../generalStyles/generalFonts';
-import {useNavigation} from '@react-navigation/native';
 import {Clock, CheckCircle, Shield, Bell} from 'lucide-react-native';
-import {getCurrentUser, getNotifications} from '../../../requestHandler/api';
+import {getCurrentUser} from '../../../requestHandler/api';
 import {useAppDispatch} from '../../../redux/hooks';
 import {setVerified} from '../../../redux/slices/providerSlice';
+import {resetToProviderStack} from '../../../navigation/navigationRef';
+
+// How long to show the "You're Verified!" confirmation before handing off
+// to the provider dashboard — long enough to register, short enough not to
+// feel stuck.
+const APPROVED_REDIRECT_DELAY_MS = 1800;
 
 const APPROVAL_POLL_INTERVAL_MS = 8000;
 
 const STEPS = [
-  {label: 'Documents received', done: true, icon: CheckCircle, color: '#10B981'},
+  {
+    label: 'Documents received',
+    done: true,
+    icon: CheckCircle,
+    color: '#10B981',
+  },
   {label: 'Identity verification', done: false, icon: Shield, color: '#F59E0B'},
   {label: 'Background check', done: false, icon: Clock, color: '#3B82F6'},
   {label: 'Account activated', done: false, icon: Bell, color: '#E8490F'},
 ];
 
 const ProviderPendingApproval: React.FC = () => {
-  const navigation = useNavigation<any>();
   const dispatch = useAppDispatch();
 
   // Pulse animation for the waiting indicator
@@ -59,14 +68,18 @@ const ProviderPendingApproval: React.FC = () => {
     ).start();
   }, [pulse, rotate]);
 
-  // status === 'active' on /me is the authoritative field, confirmed against
-  // a real response (there is no provider_profile.is_verified, despite
-  // earlier backend guidance) — check that first. The notifications check is
-  // a secondary signal in case /me is ever stale, and the FCM push (see
-  // setUpPushNavigation) may fire faster than either, but can't be trusted
-  // alone since some approval pushes only carry a display "notification"
-  // block with no "data" payload to match on.
+  const [approved, setApproved] = useState(false);
+
+  // status === 'active' on /me is the ONLY authoritative signal, confirmed
+  // against a real response (there is no provider_profile.is_verified,
+  // despite earlier backend guidance). A previous version of this screen
+  // also treated any notification whose title merely contained the word
+  // "verified" as an approval signal — which false-positived on messages
+  // like "not yet verified" or "pending verification" and sent unapproved
+  // providers straight to the dashboard. That fallback is gone; approval is
+  // decided solely by the real status field.
   useEffect(() => {
+    if (approved) return;
     let cancelled = false;
 
     const checkApproval = async () => {
@@ -74,20 +87,8 @@ const ProviderPendingApproval: React.FC = () => {
         const {data: meData} = await getCurrentUser();
         const isVerified = meData.user.status === 'active';
         dispatch(setVerified(isVerified));
-        if (isVerified) {
-          if (!cancelled) {
-            navigation.reset({index: 0, routes: [{name: 'ProviderStack'}]});
-          }
-          return;
-        }
-
-        const {data: notifData} = await getNotifications();
-        const approvedViaNotification = notifData.notifications.some(n =>
-          n.title.toLowerCase().includes('verified'),
-        );
-        if (approvedViaNotification && !cancelled) {
-          dispatch(setVerified(true));
-          navigation.reset({index: 0, routes: [{name: 'ProviderStack'}]});
+        if (isVerified && !cancelled) {
+          setApproved(true);
         }
       } catch {
         // Network hiccup — next poll tick will retry.
@@ -100,7 +101,18 @@ const ProviderPendingApproval: React.FC = () => {
       cancelled = true;
       clearInterval(interval);
     };
-  }, [navigation]);
+  }, [dispatch, approved]);
+
+  // Give the "You're Verified!" state a moment on screen before handing off
+  // to the dashboard, instead of yanking the user away the instant it lands.
+  useEffect(() => {
+    if (!approved) return;
+    const timeout = setTimeout(
+      resetToProviderStack,
+      APPROVED_REDIRECT_DELAY_MS,
+    );
+    return () => clearTimeout(timeout);
+  }, [approved]);
 
   const spin = rotate.interpolate({
     inputRange: [0, 1],
@@ -114,27 +126,48 @@ const ProviderPendingApproval: React.FC = () => {
       <View style={styles.container}>
         {/* ── Animated Icon ── */}
         <View style={styles.iconArea}>
-          <Animated.View
-            style={[styles.outerRing, {transform: [{rotate: spin}]}]}>
-            <View style={styles.outerRingDash} />
-          </Animated.View>
-          <Animated.View
-            style={[styles.innerCircle, {transform: [{scale: pulse}]}]}>
-            <Text style={styles.iconEmoji}>⏳</Text>
-          </Animated.View>
+          {approved ? (
+            <View style={[styles.innerCircle, styles.innerCircleApproved]}>
+              <Text style={styles.iconEmoji}>✅</Text>
+            </View>
+          ) : (
+            <>
+              <Animated.View
+                style={[styles.outerRing, {transform: [{rotate: spin}]}]}>
+                <View style={styles.outerRingDash} />
+              </Animated.View>
+              <Animated.View
+                style={[styles.innerCircle, {transform: [{scale: pulse}]}]}>
+                <Text style={styles.iconEmoji}>⏳</Text>
+              </Animated.View>
+            </>
+          )}
         </View>
 
         {/* ── Title ── */}
-        <Text style={styles.title}>Under Review</Text>
-        <Text style={styles.subtitle}>
-          Your application is being reviewed by the{'\n'}Sahulat Drive admin team.
-          This usually takes{'\n'}
-          <Text style={styles.highlight}>24–48 hours.</Text>
-        </Text>
+        {approved ? (
+          <>
+            <Text style={styles.title}>You're Verified! 🎉</Text>
+            <Text style={styles.subtitle}>
+              Your account has been approved by the admin team.{'\n'}
+              Taking you to your dashboard...
+            </Text>
+          </>
+        ) : (
+          <>
+            <Text style={styles.title}>Under Review</Text>
+            <Text style={styles.subtitle}>
+              Your application is being reviewed by the{'\n'}Sahulat Drive admin
+              team. This usually takes{'\n'}
+              <Text style={styles.highlight}>24–48 hours.</Text>
+            </Text>
+          </>
+        )}
 
         {/* ── Review Steps ── */}
         <View style={styles.stepsCard}>
           {STEPS.map((step, index) => {
+            const done = approved || step.done;
             const Icon = step.icon;
             const isLast = index === STEPS.length - 1;
             return (
@@ -144,14 +177,14 @@ const ProviderPendingApproval: React.FC = () => {
                     style={[
                       styles.stepIconWrap,
                       {
-                        backgroundColor: step.done
+                        backgroundColor: done
                           ? `${step.color}18`
                           : 'rgba(255,255,255,0.05)',
                       },
                     ]}>
                     <Icon
                       size={16}
-                      color={step.done ? step.color : Colors.GreyText}
+                      color={done ? step.color : Colors.GreyText}
                       strokeWidth={2}
                     />
                   </View>
@@ -159,20 +192,17 @@ const ProviderPendingApproval: React.FC = () => {
                     <View
                       style={[
                         styles.stepConnector,
-                        step.done && {backgroundColor: step.color},
+                        done && {backgroundColor: step.color},
                       ]}
                     />
                   )}
                 </View>
                 <View style={styles.stepContent}>
                   <Text
-                    style={[
-                      styles.stepLabel,
-                      step.done && {color: Colors.White},
-                    ]}>
+                    style={[styles.stepLabel, done && {color: Colors.White}]}>
                     {step.label}
                   </Text>
-                  {step.done ? (
+                  {done ? (
                     <Text style={[styles.stepStatus, {color: step.color}]}>
                       ✓ Completed
                     </Text>
@@ -185,37 +215,31 @@ const ProviderPendingApproval: React.FC = () => {
           })}
         </View>
 
-        {/* ── What happens next ── */}
-        <View style={styles.infoBox}>
-          <Text style={styles.infoIcon}>🔔</Text>
-          <Text style={styles.infoText}>
-            You'll receive a notification once your account is approved. Until
-            then, you cannot go online or receive job requests.
-          </Text>
-        </View>
+        {approved ? null : (
+          <>
+            {/* ── What happens next ── */}
+            <View style={styles.infoBox}>
+              <Text style={styles.infoIcon}>🔔</Text>
+              <Text style={styles.infoText}>
+                You'll receive a notification once your account is approved.
+                Until then, you cannot go online or receive job requests.
+              </Text>
+            </View>
 
-        {/* ── Blocking rule from backend ── */}
-        <View style={styles.ruleBox}>
-          <Text style={styles.ruleText}>
-            Until admin approval, you will not be able to go online or appear in
-            matching results.
-          </Text>
-        </View>
+            {/* ── Blocking rule from backend ── */}
+            <View style={styles.ruleBox}>
+              <Text style={styles.ruleText}>
+                Until admin approval, you will not be able to go online or
+                appear in matching results.
+              </Text>
+            </View>
 
-        {/* ── Contact Support ── */}
-        <TouchableOpacity style={styles.supportBtn} activeOpacity={0.7}>
-          <Text style={styles.supportBtnText}>Contact Support</Text>
-        </TouchableOpacity>
-
-        {/* ── Enter Provider Dashboard (simulates admin approval) ── */}
-        <TouchableOpacity
-          style={styles.dashboardBtn}
-          activeOpacity={0.85}
-          onPress={() =>
-            navigation.reset({index: 0, routes: [{name: 'ProviderStack'}]})
-          }>
-          <Text style={styles.dashboardBtnText}>Enter Provider Dashboard →</Text>
-        </TouchableOpacity>
+            {/* ── Contact Support ── */}
+            <TouchableOpacity style={styles.supportBtn} activeOpacity={0.7}>
+              <Text style={styles.supportBtnText}>Contact Support</Text>
+            </TouchableOpacity>
+          </>
+        )}
       </View>
     </SafeAreaView>
   );
@@ -267,6 +291,10 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(232,73,15,0.25)',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  innerCircleApproved: {
+    backgroundColor: 'rgba(16,185,129,0.1)',
+    borderColor: 'rgba(16,185,129,0.3)',
   },
   iconEmoji: {fontSize: 38},
   title: {
@@ -386,24 +414,5 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.UrbanistSemiBold,
     fontSize: 15,
     color: Colors.White,
-  },
-  dashboardBtn: {
-    width: '100%',
-    height: 56,
-    backgroundColor: '#E8490F',
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#E8490F',
-    shadowOpacity: 0.4,
-    shadowRadius: 14,
-    shadowOffset: {width: 0, height: 5},
-    elevation: 7,
-  },
-  dashboardBtnText: {
-    fontFamily: FontFamily.UrbanistBold,
-    fontSize: 16,
-    color: '#FFFFFF',
-    letterSpacing: 0.3,
   },
 });

@@ -8,5 +8,6 @@ export const ProviderStack = {
     ProviderPendingApproval: {name: 'ProviderPendingApproval' as const},
     ProviderIncomingJob: {name: 'ProviderIncomingJob' as const},
     ProviderActiveJob: {name: 'ProviderActiveJob' as const},
+    ProviderWorkshopBookings: {name: 'ProviderWorkshopBookings' as const},
   },
 };

@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {
   View,
   Text,
@@ -10,13 +10,13 @@ import {
   Switch,
   ScrollView,
   Alert,
+  InteractionManager,
 } from 'react-native';
 import {Colors} from '../../../generalStyles/colors';
 import {FontFamily} from '../../../generalStyles/generalFonts';
-import {useNavigation} from '@react-navigation/native';
+import {useFocusEffect, useNavigation} from '@react-navigation/native';
 import {
   Bell,
-  MapPin,
   Star,
   Briefcase,
   ChevronRight,
@@ -25,15 +25,28 @@ import {
   Battery,
   Fuel,
   Settings,
+  LocateFixed,
 } from 'lucide-react-native';
 import MapView, {Marker, PROVIDER_GOOGLE} from 'react-native-maps';
-import {requestCurrentLocation, Coordinates} from '../../../utils/location';
-import {getCurrentUser, setProviderOnlineStatus} from '../../../requestHandler/api';
+import {
+  requestCurrentLocation,
+  reverseGeocode,
+  Coordinates,
+} from '../../../utils/location';
+import {mapDarkStyle} from '../../../generalStyles/mapDarkStyle';
+import {
+  getCurrentUser,
+  setProviderOnlineStatus,
+  getProviderJobs,
+} from '../../../requestHandler/api';
 import {useAppDispatch, useAppSelector} from '../../../redux/hooks';
 import {setUser} from '../../../redux/slices/authSlice';
 import {setVerified} from '../../../redux/slices/providerSlice';
+import {normalizeProviderJob, findPendingJob} from '../../../utils/providerJob';
+import {loadDismissedAssignmentIds} from '../../../utils/dismissedJobs';
 
 const DEFAULT_COORDS: Coordinates = {latitude: 31.5204, longitude: 74.3587};
+const JOB_POLL_INTERVAL_MS = 8000;
 
 const ProviderHome: React.FC = () => {
   const navigation = useNavigation<any>();
@@ -41,17 +54,101 @@ const ProviderHome: React.FC = () => {
   const {user} = useAppSelector(state => state.auth);
   const [isOnline, setIsOnline] = useState(false);
   const [coords, setCoords] = useState<Coordinates | null>(null);
+  const [placeName, setPlaceName] = useState<string | null>(null);
+  const [locationLoading, setLocationLoading] = useState(true);
+  const [recentering, setRecentering] = useState(false);
   const [togglingOnline, setTogglingOnline] = useState(false);
+  const [checkingJobs, setCheckingJobs] = useState(false);
   const [todayJobs] = useState(3);
   const [todayEarnings] = useState('PKR 4,200');
   const [rating] = useState(4.8);
+  const mapRef = useRef<MapView>(null);
+  const coordsRef = useRef(coords);
+  const seenAssignmentIds = useRef(new Set<string>());
+
+  coordsRef.current = coords;
+
+  // Merge in assignment ids this provider already declined on any previous
+  // app run (see utils/dismissedJobs.ts) — without this, restarting the app
+  // clears the in-memory seenAssignmentIds set below and a declined job can
+  // resurface as if it were a brand-new request.
+  useEffect(() => {
+    let cancelled = false;
+    loadDismissedAssignmentIds().then(ids => {
+      if (!cancelled) {
+        ids.forEach(id => seenAssignmentIds.current.add(id));
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const goToCurrentLocation = useCallback((fresh: Coordinates) => {
+    mapRef.current?.animateToRegion(
+      {
+        latitude: fresh.latitude,
+        longitude: fresh.longitude,
+        latitudeDelta: 0.02,
+        longitudeDelta: 0.02,
+      },
+      600,
+    );
+  }, []);
+
+  // Polls the same GET /provider/jobs the "My Jobs" tab uses, and pushes the
+  // provider straight into the incoming-job sheet the moment a new pending
+  // assignment shows up — this stands in for a push/websocket notification
+  // that doesn't exist yet on the backend.
+  const checkForJobs = useCallback(async () => {
+    setCheckingJobs(true);
+    try {
+      const {data}: any = await getProviderJobs();
+      const jobsList: any[] = Array.isArray(data) ? data : data?.jobs ?? [];
+      const pending = findPendingJob(jobsList);
+      if (pending && !seenAssignmentIds.current.has(pending.assignment_id)) {
+        seenAssignmentIds.current.add(pending.assignment_id);
+        navigation.navigate('ProviderIncomingJob', {
+          job: normalizeProviderJob(pending, coordsRef.current ?? undefined),
+        });
+      }
+      return pending;
+    } catch (error: any) {
+      console.log(
+        '[ProviderHome] getProviderJobs failed:',
+        error?.response?.status,
+        error?.response?.data ?? error?.message,
+      );
+      return null;
+    } finally {
+      setCheckingJobs(false);
+    }
+  }, [navigation]);
 
   useEffect(() => {
-    (async () => {
-      const location = await requestCurrentLocation();
-      setCoords(location);
-    })();
+    if (!isOnline) return;
+    const id = setInterval(checkForJobs, JOB_POLL_INTERVAL_MS);
+    return () => clearInterval(id);
+  }, [isOnline, checkForJobs]);
 
+  // Mirrors the customer Home screen: forceRefresh on every focus (instead of
+  // a plain useEffect-on-mount) so the banner tracks real movement instead of
+  // showing a stale fix from whenever the app first launched.
+  useFocusEffect(
+    useCallback(() => {
+      const task = InteractionManager.runAfterInteractions(async () => {
+        const location = await requestCurrentLocation(true);
+        setCoords(location);
+        setLocationLoading(false);
+        if (location) {
+          setPlaceName(await reverseGeocode(location));
+        }
+      });
+      return () => task.cancel();
+    }, []),
+  );
+
+  useEffect(() => {
     // Home and Profile share the same auth/provider Redux state as their
     // single source of truth — this refresh just keeps it current.
     getCurrentUser()
@@ -69,6 +166,16 @@ const ProviderHome: React.FC = () => {
       })
       .catch(() => {});
   }, [dispatch]);
+
+  const handleRecenter = async () => {
+    setRecentering(true);
+    const location = await requestCurrentLocation(true);
+    setRecentering(false);
+    if (!location) return;
+    setCoords(location);
+    goToCurrentLocation(location);
+    setPlaceName(await reverseGeocode(location));
+  };
 
   const handleToggleOnline = async (goOnline: boolean) => {
     setTogglingOnline(true);
@@ -130,15 +237,17 @@ const ProviderHome: React.FC = () => {
 
       {/* ── Background Map ── */}
       <MapView
+        ref={mapRef}
         provider={PROVIDER_GOOGLE}
         style={StyleSheet.absoluteFillObject}
         userInterfaceStyle="dark"
         initialRegion={{
           latitude: (coords ?? DEFAULT_COORDS).latitude,
           longitude: (coords ?? DEFAULT_COORDS).longitude,
-          latitudeDelta: 0.04,
-          longitudeDelta: 0.04,
-        }}>
+          latitudeDelta: 0.05,
+          longitudeDelta: 0.05,
+        }}
+        customMapStyle={mapDarkStyle}>
         <Marker coordinate={coords ?? DEFAULT_COORDS}>
           <View style={[styles.providerDot, isOnline && styles.providerDotOnline]} />
         </Marker>
@@ -166,18 +275,28 @@ const ProviderHome: React.FC = () => {
             </View>
           </View>
 
-          {/* Location Row */}
-          <TouchableOpacity style={styles.locationBanner} activeOpacity={0.8}>
+          {/* Location Row — tap to recenter the map on your current position */}
+          <TouchableOpacity
+            style={styles.locationBanner}
+            activeOpacity={0.8}
+            onPress={handleRecenter}
+            disabled={recentering}>
             <View style={styles.locationLeft}>
               <View style={styles.locationIconWrap}>
-                <MapPin size={16} color="#E8490F" strokeWidth={2} />
+                <LocateFixed size={16} color="#E8490F" strokeWidth={2} />
               </View>
               <View>
                 <Text style={styles.locationLabel}>Your Location</Text>
                 <Text style={styles.locationText}>
-                  {coords
+                  {recentering
+                    ? 'Locating…'
+                    : locationLoading
+                    ? 'Detecting…'
+                    : placeName
+                    ? placeName
+                    : coords
                     ? `${coords.latitude.toFixed(4)}° N, ${coords.longitude.toFixed(4)}° E`
-                    : 'Detecting…'}
+                    : 'Location unavailable'}
                 </Text>
               </View>
             </View>
@@ -219,14 +338,24 @@ const ProviderHome: React.FC = () => {
             />
           </View>
 
-          {/* ── Developer Simulation Button ── */}
+          {/* ── Manual "check now" — the interval above already polls this
+              automatically every few seconds while online, this just lets
+              the provider force an immediate check instead of waiting. ── */}
           {isOnline && (
             <TouchableOpacity
               style={styles.simulateJobBtn}
               activeOpacity={0.85}
-              onPress={() => navigation.navigate('ProviderIncomingJob')}>
+              disabled={checkingJobs}
+              onPress={async () => {
+                const pending = await checkForJobs();
+                if (!pending) {
+                  Alert.alert('No Jobs Yet', 'No pending job requests right now.');
+                }
+              }}>
               <Zap size={18} color="#FFFFFF" strokeWidth={2.5} />
-              <Text style={styles.simulateJobBtnText}>Simulate Incoming Job Request</Text>
+              <Text style={styles.simulateJobBtnText}>
+                {checkingJobs ? 'Checking…' : 'Check for New Jobs'}
+              </Text>
             </TouchableOpacity>
           )}
 

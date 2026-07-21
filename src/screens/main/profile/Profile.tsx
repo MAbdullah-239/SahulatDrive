@@ -2,6 +2,7 @@ import React, {useCallback, useState} from 'react';
 import {useFocusEffect, useNavigation} from '@react-navigation/native';
 import {useAppDispatch, useAppSelector} from '../../../redux/hooks';
 import {logout} from '../../../redux/slices/authSlice';
+import {setVerified} from '../../../redux/slices/providerSlice';
 import {
   getVehicles,
   addVehicle,
@@ -193,7 +194,11 @@ export const Profile: React.FC = () => {
               // Cookie may already be expired server-side — proceed with
               // local sign-out regardless, nothing the user can do about it.
             }
+            // Clears any stale provider.isVerified left in memory from a
+            // previous provider session on this device, so it can't leak
+            // into whichever account logs in next.
             dispatch(logout());
+            dispatch(setVerified(false));
             navigation.reset({index: 0, routes: [{name: 'AuthStack'}]});
           },
         },

@@ -59,19 +59,27 @@ const ProviderSelectServices: React.FC = () => {
   };
 
   const needsTowTruck = selected.includes('towing');
+  const needsWorkshop = selected.includes('mechanic');
   const canContinue = selected.length > 0 && !submitting;
 
   const handleContinue = async () => {
     // Towing requires a two-person driver setup, so it takes priority over
     // a plain workshop type when both are selected.
-    const providerType = needsTowTruck ? 'two_driver' : 'workshop';
+    const providerType = needsTowTruck ? 'two_driver' : 'workshop-owner';
 
     setSubmitting(true);
     try {
       await setProviderType({provider_type: providerType});
 
       if (needsTowTruck) {
+        // Tow truck registration comes first; it forwards to the workshop
+        // step too if the provider also selected "mechanic".
         navigation.navigate(AuthStack.nestedScreens.ProviderAddTowTruck.name, {
+          categories: selected,
+          needsWorkshop,
+        });
+      } else if (needsWorkshop) {
+        navigation.navigate(AuthStack.nestedScreens.ProviderAddWorkshop.name, {
           categories: selected,
         });
       } else {
@@ -231,6 +239,8 @@ const ProviderSelectServices: React.FC = () => {
             <Text style={styles.primaryBtnText}>
               {needsTowTruck
                 ? 'Next → Add Tow Truck'
+                : needsWorkshop
+                ? 'Next → Set Up Workshop'
                 : 'Next → Upload Documents'}
             </Text>
           )}

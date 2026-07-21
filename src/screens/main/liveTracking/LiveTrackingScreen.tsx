@@ -1,4 +1,4 @@
-import React, {useEffect, useRef, useState} from 'react';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {
   View,
   Text,
@@ -7,15 +7,12 @@ import {
   Animated,
   Platform,
   StatusBar,
+  Alert,
+  Linking,
 } from 'react-native';
 import MapView, {Marker, Polyline, PROVIDER_GOOGLE} from 'react-native-maps';
-import {
-  ArrowLeft,
-  Phone,
-  MessageCircle,
-  Wrench,
-  Star,
-} from 'lucide-react-native';
+import {useNavigation, useRoute} from '@react-navigation/native';
+import {ArrowLeft, Phone, Wrench} from 'lucide-react-native';
 import {Colors} from '../../../generalStyles/colors';
 import {FontFamily} from '../../../generalStyles/generalFonts';
 import {
@@ -23,55 +20,54 @@ import {
   HEIGHT_BASE_RATIO,
   FONT_SIZE,
 } from '../../../utils/helpers';
-interface LiveTrackingScreenProps {
-  onClose: () => void;
-}
-const USER_COORD = {latitude: 31.5204, longitude: 74.3587};
-const MECHANIC_COORD = {latitude: 31.529, longitude: 74.363};
-const ROUTE_COORDS = [
-  {latitude: 31.529, longitude: 74.363},
-  {latitude: 31.529, longitude: 74.3587},
-  {latitude: 31.5204, longitude: 74.3587},
-];
-const STATUS_STEPS = ['Accepted', 'En Route', 'Arrived', 'Working', 'Done'];
-const mapDarkStyle = [
-  {elementType: 'geometry', stylers: [{color: '#1a1a2e'}]},
-  {elementType: 'labels.icon', stylers: [{visibility: 'off'}]},
-  {elementType: 'labels.text.fill', stylers: [{color: '#6b7280'}]},
-  {elementType: 'labels.text.stroke', stylers: [{color: '#1a1a2e'}]},
-  {
-    featureType: 'road',
-    elementType: 'geometry.fill',
-    stylers: [{color: '#252540'}],
-  },
-  {
-    featureType: 'road',
-    elementType: 'labels.text.fill',
-    stylers: [{color: '#6b7280'}],
-  },
-  {
-    featureType: 'road.arterial',
-    elementType: 'geometry',
-    stylers: [{color: '#2e2e4e'}],
-  },
-  {
-    featureType: 'road.highway',
-    elementType: 'geometry',
-    stylers: [{color: '#333355'}],
-  },
-  {
-    featureType: 'water',
-    elementType: 'geometry',
-    stylers: [{color: '#0d0d1a'}],
-  },
-  {featureType: 'poi', stylers: [{visibility: 'off'}]},
-  {featureType: 'transit', stylers: [{visibility: 'off'}]},
-];
-const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({onClose}) => {
-  const [etaMinutes, setEtaMinutes] = useState(7);
-  const [activeStep, setActiveStep] = useState(1);
+import {mapDarkStyle} from '../../../generalStyles/mapDarkStyle';
+import {
+  getServiceRequests,
+  getRequestProviderLocation,
+} from '../../../requestHandler/api';
+import {Coordinates, haversineKm} from '../../../utils/location';
+import {
+  iconForCategory,
+  labelForCategory,
+} from '../../../utils/serviceCategory';
+
+const STATUS_POLL_MS = 6000;
+const LOCATION_POLL_MS = 7000;
+
+// assigned/accepted collapse to the same "Accepted" step — the backend
+// distinguishes "matched, not yet acknowledged" from "provider tapped
+// accept", but there's nothing meaningfully different to show the customer
+// between those two states.
+const STATUS_STEP_INDEX: Record<string, number> = {
+  assigned: 0,
+  accepted: 0,
+  on_the_way: 1,
+  completed: 2,
+};
+const STEP_LABELS = ['Accepted', 'En Route', 'Completed'];
+
+const LiveTrackingScreen: React.FC = () => {
+  const navigation = useNavigation<any>();
+  const route = useRoute<any>();
+  const requestId: string | undefined = route.params?.requestId;
+
+  const [status, setStatus] = useState<string | null>(null);
+  const [customerCoords, setCustomerCoords] = useState<Coordinates | null>(
+    null,
+  );
+  const [providerCoords, setProviderCoords] = useState<Coordinates | null>(
+    null,
+  );
+  const [providerName, setProviderName] = useState<string | null>(null);
+  const [providerPhone, setProviderPhone] = useState<string | null>(null);
+  const [serviceLabel, setServiceLabel] = useState('Roadside Assistance');
+  const [serviceIcon, setServiceIcon] = useState('🛠️');
+  const [address, setAddress] = useState<string | null>(null);
+  const finishedRef = useRef(false);
+
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const pulseOpacity = useRef(new Animated.Value(0.7)).current;
+
   useEffect(() => {
     Animated.loop(
       Animated.sequence([
@@ -101,12 +97,118 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({onClose}) => {
         ]),
       ]),
     ).start();
-  }, []);
+  }, [pulseAnim, pulseOpacity]);
+
+  // Polls the same GET /service_requests list the rest of the app uses (there
+  // is no GET /service_requests/:id in the Postman collection) to pick up
+  // status changes and the assigned provider's name/phone.
+  const pollStatus = useCallback(async () => {
+    if (!requestId || finishedRef.current) return;
+    try {
+      const {data}: any = await getServiceRequests();
+      const list: any[] = data?.service_requests ?? [];
+      const sr = list.find(r => r.id === requestId);
+      if (!sr) return;
+
+      setStatus(sr.status);
+      setCustomerCoords({
+        latitude: parseFloat(sr.latitude),
+        longitude: parseFloat(sr.longitude),
+      });
+      setAddress(sr.address ?? null);
+      if (sr.service_category?.name) {
+        setServiceLabel(labelForCategory(sr.service_category.name));
+        setServiceIcon(iconForCategory(sr.service_category.name));
+      }
+      if (sr.provider) {
+        setProviderName(sr.provider.name ?? null);
+        setProviderPhone(sr.provider.phone ?? null);
+        // The provider's live position comes back nested right here
+        // (provider.current_lat/current_lng) — confirmed against a real
+        // accepted request. This is the primary source; the dedicated
+        // provider_location endpoint below is only a fallback in case a
+        // future response shape drops it from this list.
+        if (
+          sr.provider.current_lat != null &&
+          sr.provider.current_lng != null
+        ) {
+          const lat = parseFloat(sr.provider.current_lat);
+          const lng = parseFloat(sr.provider.current_lng);
+          if (Number.isFinite(lat) && Number.isFinite(lng)) {
+            setProviderCoords({latitude: lat, longitude: lng});
+          }
+        }
+      }
+
+      if (sr.status === 'completed') {
+        finishedRef.current = true;
+        Alert.alert(
+          'Job Completed',
+          'Your provider marked this request as completed.',
+          [{text: 'OK', onPress: () => navigation.goBack()}],
+        );
+      } else if (sr.status === 'cancelled') {
+        finishedRef.current = true;
+        Alert.alert('Request Cancelled', 'This request is no longer active.', [
+          {text: 'OK', onPress: () => navigation.goBack()},
+        ]);
+      }
+    } catch (error: any) {
+      console.log(
+        '[LiveTracking] pollStatus failed:',
+        error?.response?.status,
+        error?.response?.data ?? error?.message,
+      );
+    }
+  }, [requestId, navigation]);
+
+  // 404 here is a normal "no location yet" state (provider not accepted, or
+  // hasn't sent a ping yet) per the backend contract — not an error, so it's
+  // swallowed and the sheet just keeps showing "Waiting for provider location…".
+  const pollProviderLocation = useCallback(async () => {
+    if (!requestId || finishedRef.current) return;
+    try {
+      const {data}: any = await getRequestProviderLocation(requestId);
+      if (data?.latitude != null && data?.longitude != null) {
+        setProviderCoords({
+          latitude: parseFloat(data.latitude as any),
+          longitude: parseFloat(data.longitude as any),
+        });
+      }
+    } catch (error: any) {
+      if (error?.response?.status !== 404) {
+        console.log(
+          '[LiveTracking] pollProviderLocation failed:',
+          error?.response?.status,
+          error?.response?.data ?? error?.message,
+        );
+      }
+    }
+  }, [requestId]);
+
   useEffect(() => {
-    if (etaMinutes <= 0) return;
-    const id = setInterval(() => setEtaMinutes(p => Math.max(0, p - 1)), 60000);
-    return () => clearInterval(id);
-  }, []);
+    pollStatus();
+    pollProviderLocation();
+    const statusId = setInterval(pollStatus, STATUS_POLL_MS);
+    const locationId = setInterval(pollProviderLocation, LOCATION_POLL_MS);
+    return () => {
+      clearInterval(statusId);
+      clearInterval(locationId);
+    };
+  }, [pollStatus, pollProviderLocation]);
+
+  const distanceKm =
+    customerCoords && providerCoords
+      ? haversineKm(customerCoords, providerCoords)
+      : null;
+  const etaMinutes =
+    distanceKm != null ? Math.max(1, Math.round((distanceKm / 30) * 60)) : null;
+  const activeStep = status ? STATUS_STEP_INDEX[status] ?? 0 : 0;
+  const mapCenter = customerCoords ?? {latitude: 31.5204, longitude: 74.3587};
+
+  const handleCall = () => {
+    if (providerPhone) Linking.openURL(`tel:${providerPhone}`);
+  };
 
   return (
     <View style={styles.root}>
@@ -121,50 +223,56 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({onClose}) => {
         userInterfaceStyle="dark"
         customMapStyle={mapDarkStyle}
         initialRegion={{
-          latitude: 31.5247,
-          longitude: 74.361,
-          latitudeDelta: 0.022,
-          longitudeDelta: 0.022,
+          latitude: mapCenter.latitude,
+          longitude: mapCenter.longitude,
+          latitudeDelta: 0.03,
+          longitudeDelta: 0.03,
         }}
         scrollEnabled
         zoomEnabled
         pitchEnabled={false}
         rotateEnabled={false}>
-        <Polyline
-          coordinates={ROUTE_COORDS}
-          strokeColor="#E8490F"
-          strokeWidth={3}
-          lineDashPattern={[6, 6]}
-        />
-        <Marker coordinate={USER_COORD}>
-          <View style={styles.userMarker}>
-            <View style={styles.userMarkerInner} />
-          </View>
-        </Marker>
-        <Marker coordinate={MECHANIC_COORD} anchor={{x: 0.5, y: 0.5}}>
-          <View style={styles.mechanicMarkerWrap}>
-            <Animated.View
-              style={[
-                styles.pulseRing,
-                {transform: [{scale: pulseAnim}], opacity: pulseOpacity},
-              ]}
-            />
-            <View style={styles.mechanicMarkerCircle}>
-              <View style={styles.mechanicMarkerIcon}>
-                <Wrench
-                  size={WIDTH_BASE_RATIO(16)}
-                  color="#FFFFFF"
-                  strokeWidth={2.5}
-                />
+        {customerCoords && providerCoords ? (
+          <Polyline
+            coordinates={[providerCoords, customerCoords]}
+            strokeColor="#E8490F"
+            strokeWidth={3}
+            lineDashPattern={[6, 6]}
+          />
+        ) : null}
+        {customerCoords ? (
+          <Marker coordinate={customerCoords}>
+            <View style={styles.userMarker}>
+              <View style={styles.userMarkerInner} />
+            </View>
+          </Marker>
+        ) : null}
+        {providerCoords ? (
+          <Marker coordinate={providerCoords} anchor={{x: 0.5, y: 0.5}}>
+            <View style={styles.mechanicMarkerWrap}>
+              <Animated.View
+                style={[
+                  styles.pulseRing,
+                  {transform: [{scale: pulseAnim}], opacity: pulseOpacity},
+                ]}
+              />
+              <View style={styles.mechanicMarkerCircle}>
+                <View style={styles.mechanicMarkerIcon}>
+                  <Wrench
+                    size={WIDTH_BASE_RATIO(16)}
+                    color="#FFFFFF"
+                    strokeWidth={2.5}
+                  />
+                </View>
               </View>
             </View>
-          </View>
-        </Marker>
+          </Marker>
+        ) : null}
       </MapView>
       <View style={styles.topOverlay}>
         <TouchableOpacity
           style={styles.backBtn}
-          onPress={onClose}
+          onPress={() => navigation.goBack()}
           activeOpacity={0.85}>
           <ArrowLeft
             size={WIDTH_BASE_RATIO(18)}
@@ -180,17 +288,21 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({onClose}) => {
       </View>
       <View style={styles.bottomSheet}>
         <View style={styles.etaCard}>
-          <View>
-            <Text style={styles.etaLabel}>Mechanic arriving in</Text>
+          <View style={styles.etaLeft}>
+            <Text style={styles.etaLabel} numberOfLines={1}>
+              {serviceIcon} {serviceLabel} · {address ?? 'Your location'}
+            </Text>
             <View style={styles.etaValueRow}>
-              <Text style={styles.etaNumber}>{etaMinutes}</Text>
+              <Text style={styles.etaNumber}>{etaMinutes ?? '—'}</Text>
               <Text style={styles.etaUnit}> min</Text>
             </View>
           </View>
           <View style={styles.etaDivider} />
           <View style={styles.distanceBox}>
             <Text style={styles.distanceLabel}>Distance</Text>
-            <Text style={styles.distanceValue}>1.4 km</Text>
+            <Text style={styles.distanceValue}>
+              {distanceKm != null ? `${distanceKm.toFixed(1)} km` : '—'}
+            </Text>
           </View>
         </View>
         <View style={styles.statusSection}>
@@ -198,7 +310,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({onClose}) => {
             <Text style={styles.statusTitle}>Status</Text>
             <View style={styles.statusBadge}>
               <Text style={styles.statusBadgeText}>
-                {STATUS_STEPS[activeStep]}
+                {STEP_LABELS[activeStep]}
               </Text>
             </View>
           </View>
@@ -207,10 +319,10 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({onClose}) => {
             <View
               style={[
                 styles.stepTrackFill,
-                {width: `${(activeStep / (STATUS_STEPS.length - 1)) * 100}%`},
+                {width: `${(activeStep / (STEP_LABELS.length - 1)) * 100}%`},
               ]}
             />
-            {STATUS_STEPS.map((label, idx) => {
+            {STEP_LABELS.map((label, idx) => {
               const done = idx < activeStep;
               const active = idx === activeStep;
               return (
@@ -241,39 +353,22 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({onClose}) => {
             <View style={styles.mechanicOnlineDot} />
           </View>
           <View style={styles.mechanicInfo}>
-            <Text style={styles.mechanicName}>Tariq Mahmood</Text>
-            <Text style={styles.mechanicSub}>
-              Certified Mechanic · 847 jobs
+            <Text style={styles.mechanicName}>
+              {providerName ?? 'Finding provider…'}
             </Text>
-            <View style={styles.starsRow}>
-              {[1, 2, 3, 4].map(i => (
-                <Star
-                  key={i}
-                  size={WIDTH_BASE_RATIO(13)}
-                  color="#F59E0B"
-                  fill="#F59E0B"
-                  strokeWidth={1}
-                />
-              ))}
-              <Star
-                size={WIDTH_BASE_RATIO(13)}
-                color="#F59E0B"
-                fill="transparent"
-                strokeWidth={1.5}
-              />
-              <Text style={styles.ratingVal}>4.8</Text>
-            </View>
+            <Text style={styles.mechanicSub}>
+              {providerCoords
+                ? 'Live location updating'
+                : 'Waiting for provider location…'}
+            </Text>
           </View>
           <View style={styles.mechanicActions}>
-            <TouchableOpacity style={styles.actionBtn} activeOpacity={0.8}>
+            <TouchableOpacity
+              style={styles.actionBtn}
+              activeOpacity={0.8}
+              disabled={!providerPhone}
+              onPress={handleCall}>
               <Phone
-                size={WIDTH_BASE_RATIO(18)}
-                color={Colors.White}
-                strokeWidth={2}
-              />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionBtn} activeOpacity={0.8}>
-              <MessageCircle
                 size={WIDTH_BASE_RATIO(18)}
                 color={Colors.White}
                 strokeWidth={2}
@@ -422,6 +517,10 @@ const styles = StyleSheet.create({
     paddingVertical: HEIGHT_BASE_RATIO(16),
     marginBottom: HEIGHT_BASE_RATIO(20),
   },
+  etaLeft: {
+    flex: 1,
+    minWidth: 0,
+  },
   etaLabel: {
     fontFamily: FontFamily.UrbanistMedium,
     fontSize: FONT_SIZE(13),
@@ -450,6 +549,7 @@ const styles = StyleSheet.create({
   },
   distanceBox: {
     alignItems: 'flex-end',
+    flexShrink: 0,
   },
   distanceLabel: {
     fontFamily: FontFamily.UrbanistMedium,

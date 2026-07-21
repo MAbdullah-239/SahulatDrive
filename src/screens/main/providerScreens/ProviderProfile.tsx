@@ -189,7 +189,11 @@ const ProviderProfile: React.FC = () => {
 
         {/* ── Logout ── */}
         <TouchableOpacity style={styles.logoutBtn} activeOpacity={0.8} onPress={() => {
+          // Without this, a previously-approved provider's isVerified: true
+          // stays in memory after logout and can leak into whichever
+          // account logs in next during the same app session.
           dispatch(logout());
+          dispatch(setVerified(false));
           navigation.reset({ index: 0, routes: [{ name: 'AuthStack' }] });
         }}>
           <LogOut size={18} color="#EA4335" strokeWidth={2} />

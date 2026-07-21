@@ -8,7 +8,10 @@ export interface User {
   email: string;
   phone: string;
   role: UserRole;
-  isVerified?: boolean;
+  // Phone OTP confirmation — unrelated to provider admin-approval, which
+  // lives in provider.isVerified (see providerSlice.ts). Kept distinctly
+  // named so the two are never confused for the same gate.
+  otpVerified?: boolean;
 }
 
 interface AuthState {

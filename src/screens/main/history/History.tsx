@@ -31,7 +31,6 @@ import {
   Signal,
   Circle,
 } from 'lucide-react-native';
-import LiveTrackingScreen from '../liveTracking/LiveTrackingScreen';
 
 interface PastRequest {
   id: string;
@@ -99,7 +98,6 @@ export const History: React.FC = () => {
   >('En Route');
   const [etaSeconds, setEtaSeconds] = useState(720);
   const [selectedRequest, setSelectedRequest] = useState<PastRequest | null>(null);
-  const [showLiveTracking, setShowLiveTracking] = useState(false);
 
   useEffect(() => {
     if (requestStatus === 'Completed') return;
@@ -313,17 +311,6 @@ export const History: React.FC = () => {
               {/* Buttons */}
               <View style={styles.actionRow}>
                 <TouchableOpacity
-                  style={[
-                    styles.trackBtn,
-                    requestStatus === 'Searching' && styles.trackBtnDisabled,
-                  ]}
-                  activeOpacity={0.85}
-                  disabled={requestStatus === 'Searching'}
-                  onPress={() => setShowLiveTracking(true)}>
-                  <Navigation2 size={16} color="#FFFFFF" strokeWidth={2} />
-                  <Text style={styles.trackBtnText}>Live Track</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
                   style={styles.simBtn}
                   onPress={advanceStatus}
                   activeOpacity={0.8}>
@@ -444,15 +431,6 @@ export const History: React.FC = () => {
         )}
         <View style={styles.bottomSpacer} />
       </ScrollView>
-
-      {/* ── Live Tracking Full-Screen Modal ── */}
-      <Modal
-        visible={showLiveTracking}
-        animationType="slide"
-        statusBarTranslucent
-        onRequestClose={() => setShowLiveTracking(false)}>
-        <LiveTrackingScreen onClose={() => setShowLiveTracking(false)} />
-      </Modal>
 
       {/* Timeline Modal */}
       <Modal

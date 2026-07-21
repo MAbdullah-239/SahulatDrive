@@ -29,6 +29,7 @@ import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {ProviderStackParamList} from '../../../navigation/providerStackNavigation';
 import {getProviderJobs} from '../../../requestHandler/api';
+import {normalizeProviderJob} from '../../../utils/providerJob';
 
 const JOB_ICON_MAP: Record<string, any> = {
   towing: Truck,
@@ -105,28 +106,34 @@ const ProviderJobsHistory: React.FC = () => {
         const {data} = await getProviderJobs();
         const jobsList = Array.isArray(data) ? data : data.jobs || [];
         if (jobsList.length > 0) {
-          const formatted = jobsList.map((job: any) => {
+          const formatted = jobsList.map((raw: any) => {
+            // /provider/jobs nests the actual request under service_request —
+            // history entries and job.status below are the raw wrapper this
+            // endpoint returns (assignment_id + service_request), not a flat
+            // service_request row, hence reading through `sr`.
+            const sr = raw.service_request ?? raw;
             const statusLabel =
-              job.status === 'completed'
+              sr.status === 'completed'
                 ? 'Completed'
-                : job.status === 'cancelled'
+                : sr.status === 'cancelled'
                 ? 'Cancelled'
                 : 'Active';
 
-            const dateObj = job.created_at ? new Date(job.created_at) : new Date();
+            const dateObj = sr.created_at ? new Date(sr.created_at) : new Date();
             const dateStr = dateObj.toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' });
             const timeStr = dateObj.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
 
             return {
-              id: job.id,
-              category: job.service_category?.name || 'towing',
-              customer: job.customer?.name || job.user?.name || 'Customer',
-              customerRating: job.customer?.rating || 4.5,
+              id: sr.id,
+              category: sr.service_category?.name || 'towing',
+              customer: sr.customer?.name || sr.user?.name || 'Customer',
+              customerRating: sr.customer?.rating || 4.5,
               date: dateStr,
               time: timeStr,
-              location: job.address || 'Unknown Location',
-              amount: `PKR ${job.final_price || job.service_category?.base_price || 1000}`,
+              location: sr.address || 'Unknown Location',
+              amount: `PKR ${sr.final_price || sr.service_category?.base_price || 1000}`,
               status: statusLabel,
+              raw,
             };
           });
           setJobs(formatted);
@@ -161,9 +168,18 @@ const ProviderJobsHistory: React.FC = () => {
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>My Jobs</Text>
-        <View style={styles.earningsBadge}>
-          <Text style={styles.earningsText}>PKR {totalEarned.toLocaleString()}</Text>
-          <Text style={styles.earningsLabel}> earned</Text>
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            style={styles.workshopBookingsLink}
+            onPress={() => navigation.navigate('ProviderWorkshopBookings')}
+            activeOpacity={0.7}>
+            <Text style={styles.workshopBookingsLinkText}>Workshop Bookings</Text>
+            <ChevronRight size={14} color="#E8490F" strokeWidth={2.5} />
+          </TouchableOpacity>
+          <View style={styles.earningsBadge}>
+            <Text style={styles.earningsText}>PKR {totalEarned.toLocaleString()}</Text>
+            <Text style={styles.earningsLabel}> earned</Text>
+          </View>
         </View>
       </View>
 
@@ -205,7 +221,11 @@ const ProviderJobsHistory: React.FC = () => {
                 key={job.id}
                 style={styles.jobCard}
                 activeOpacity={0.85}
-                onPress={() => navigation.navigate('ProviderActiveJob')}>
+                onPress={() =>
+                  navigation.navigate('ProviderActiveJob', {
+                    job: job.raw ? normalizeProviderJob(job.raw) : undefined,
+                  })
+                }>
                 {/* Top row */}
                 <View style={styles.jobTopRow}>
                   <View style={styles.jobTypeRow}>
@@ -304,6 +324,17 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.UrbanistBold,
     fontSize: 26,
     color: Colors.White,
+  },
+  headerActions: {alignItems: 'flex-end', gap: 8},
+  workshopBookingsLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  workshopBookingsLinkText: {
+    fontFamily: FontFamily.UrbanistSemiBold,
+    fontSize: 13,
+    color: '#E8490F',
   },
   earningsBadge: {
     flexDirection: 'row',

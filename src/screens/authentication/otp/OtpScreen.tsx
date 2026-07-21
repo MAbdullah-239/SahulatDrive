@@ -1,4 +1,4 @@
-import React, {useState, useRef} from 'react';
+import React, {useState, useRef, useEffect} from 'react';
 import {
   View,
   Text,
@@ -17,22 +17,29 @@ import {FontFamily} from '../../../generalStyles/generalFonts';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {AuthStack} from '../../../constants/stack/authStack/authStack';
-import {verifyRegistrationOtp} from '../../../requestHandler/api';
+import {
+  verifyRegistrationOtp,
+  resendRegistrationOtp,
+} from '../../../requestHandler/api';
 import {useAppDispatch} from '../../../redux/hooks';
 import {setUser} from '../../../redux/slices/authSlice';
 import {registerDeviceToken} from '../../../utils/registerDeviceToken';
+import {formatTimer} from '../../../utils/helpers';
 
 const OTP_LENGTH = 6;
+const RESEND_COOLDOWN_SECONDS = 60;
 
 interface OtpScreenProps {
   onBack?: () => void;
   onVerify?: (otp: string) => void;
+  onResend?: () => void | Promise<void>;
   phoneNumber?: string;
 }
 
 const OtpScreen: React.FC<OtpScreenProps> = ({
   onBack,
   onVerify,
+  onResend,
   phoneNumber,
 }) => {
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
@@ -41,7 +48,15 @@ const OtpScreen: React.FC<OtpScreenProps> = ({
   const displayPhone = phoneNumber || route.params?.phone || '+92 311 2345678';
   const [otp, setOtp] = useState<string[]>(new Array(OTP_LENGTH).fill(''));
   const [verifying, setVerifying] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [timer, setTimer] = useState(RESEND_COOLDOWN_SECONDS);
   const inputs = useRef<Array<TextInput | null>>([]);
+
+  useEffect(() => {
+    if (timer === 0) return;
+    const interval = setInterval(() => setTimer(prev => prev - 1), 1000);
+    return () => clearInterval(interval);
+  }, [timer]);
 
   const handleOtpChange = (value: string, index: number) => {
     // SMS autofill (iOS QuickType strip / Android sms-otp) delivers the full
@@ -100,7 +115,7 @@ const OtpScreen: React.FC<OtpScreenProps> = ({
           email: data.user.email,
           phone: data.user.phone,
           role: data.user.role,
-          isVerified: data.user.otp_verified,
+          otpVerified: data.user.otp_verified,
         }),
       );
 
@@ -128,6 +143,34 @@ const OtpScreen: React.FC<OtpScreenProps> = ({
       );
     } finally {
       setVerifying(false);
+    }
+  };
+
+  const handleResendPress = async () => {
+    if (timer > 0 || resending) return;
+
+    setOtp(new Array(OTP_LENGTH).fill(''));
+    inputs.current[0]?.focus();
+    setTimer(RESEND_COOLDOWN_SECONDS);
+
+    setResending(true);
+    try {
+      if (onResend) {
+        await onResend();
+      } else {
+        // Real navigation usage (no onResend prop wired in) — this is the
+        // registration OTP screen, so hit the resend endpoint directly.
+        await resendRegistrationOtp({phone: route.params?.phone});
+      }
+    } catch (error: any) {
+      console.log(
+        'Resend OTP failed:',
+        error?.response?.status,
+        error?.response?.data ?? error?.message,
+      );
+      Alert.alert('Could not resend', 'Please try again in a moment.');
+    } finally {
+      setResending(false);
     }
   };
 
@@ -190,11 +233,27 @@ const OtpScreen: React.FC<OtpScreenProps> = ({
             ))}
           </View>
 
+          {/* ── Resend (with cooldown) ── */}
           <View style={styles.resendContainer}>
-            <Text style={styles.resendText}>Didn't receive the code? </Text>
-            <TouchableOpacity activeOpacity={0.7}>
-              <Text style={styles.resendLink}>Resend OTP</Text>
-            </TouchableOpacity>
+            {timer > 0 ? (
+              <Text style={styles.resendTimerText}>
+                Resend code in {formatTimer(timer)}
+              </Text>
+            ) : (
+              <>
+                <Text style={styles.resendText}>Didn't receive the code? </Text>
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={handleResendPress}
+                  disabled={resending}>
+                  {resending ? (
+                    <ActivityIndicator size="small" color="#E8490F" />
+                  ) : (
+                    <Text style={styles.resendLink}>Resend OTP</Text>
+                  )}
+                </TouchableOpacity>
+              </>
+            )}
           </View>
         </View>
 
@@ -303,6 +362,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    minHeight: 20,
   },
   resendText: {
     fontFamily: FontFamily.UrbanistRegular,
@@ -313,6 +373,11 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.UrbanistBold,
     fontSize: 14,
     color: '#E8490F',
+  },
+  resendTimerText: {
+    fontFamily: FontFamily.UrbanistRegular,
+    fontSize: 14,
+    color: Colors.GreyText,
   },
   bottomContainer: {
     paddingHorizontal: 24,

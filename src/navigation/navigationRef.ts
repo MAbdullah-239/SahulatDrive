@@ -11,3 +11,9 @@ export const resetToProviderStack = () => {
     navigationRef.reset({index: 0, routes: [{name: 'ProviderStack'}]});
   }
 };
+
+export const resetToMainStack = () => {
+  if (navigationRef.isReady()) {
+    navigationRef.reset({index: 0, routes: [{name: 'MainStack'}]});
+  }
+};

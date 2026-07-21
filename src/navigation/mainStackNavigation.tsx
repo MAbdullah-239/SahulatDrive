@@ -6,6 +6,7 @@ import BookWorkshop from '../screens/main/bookWorkshop/BookWorkshop';
 import AiDiagnosis from '../screens/main/aiDiagnosis/AiDiagnosis';
 import VoiceAssistant from '../screens/main/voiceAssistant/VoiceAssistant';
 import MechanicWorkshopDetail from '../screens/main/mechanicDetail/MechanicWorkshopDetail';
+import LiveTrackingScreen from '../screens/main/liveTracking/LiveTrackingScreen';
 import {MainStack as MainStackConstants} from '../constants/stack/mainStack/mainStack';
 import {DetailParams} from '../screens/main/mechanicDetail/MechanicWorkshopDetail';
 
@@ -16,6 +17,7 @@ export type MainStackParamList = {
   AiDiagnosis: undefined;
   VoiceAssistant: undefined;
   MechanicWorkshopDetail: {item: DetailParams};
+  LiveTracking: {requestId: string};
 };
 
 const Stack = createNativeStackNavigator<MainStackParamList>();
@@ -49,6 +51,10 @@ const MainStackNavigation = () => {
         name="MechanicWorkshopDetail"
         component={MechanicWorkshopDetail}
         options={{animation: 'slide_from_right'}}
+      />
+      <Stack.Screen
+        name={MainStackConstants.nestedScreens.LiveTracking.name}
+        component={LiveTrackingScreen}
       />
     </Stack.Navigator>
   );

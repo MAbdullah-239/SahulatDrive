@@ -38,6 +38,24 @@ export const verifyRegistrationOtp = (data: {phone: string; otp_code: string}) =
     };
   }>('/auth/verify_registration_otp', data);
 
+// The collection's "Resend_registration_otp" request is an unfilled
+// placeholder (GET, no url/body) — this follows the same
+// POST /auth/<action> + {phone} shape as register/verify above since no
+// other contract is documented. Update this if the real endpoint differs.
+export const resendRegistrationOtp = (data: {phone: string}) =>
+  apiClient.post<{message: string}>('/auth/resend_registration_otp', data);
+
+// Password reset is a two-step, unauthenticated flow:
+// 1. POST /auth/forgot_password — {login} (email or phone). Sends an OTP.
+// 2. POST /auth/reset_password — {otp_code, new_password}. No login/phone
+//    in the body per the collection, so the backend must be scoping the OTP
+//    to whichever account forgot_password was just called for.
+export const forgotPassword = (data: {login: string}) =>
+  apiClient.post<{message: string}>('/auth/forgot_password', data);
+
+export const resetPassword = (data: {otp_code: string; new_password: string}) =>
+  apiClient.post<{message: string}>('/auth/reset_password', data);
+
 // Confirmed against a real GET /me response for a provider — there is no
 // provider_profile.is_verified field (despite earlier backend guidance);
 // approval is reflected as status: "active" at the top level instead.
@@ -102,10 +120,15 @@ export const updateVehicle = (
   }>,
 ) => apiClient.patch(`/vehicles/${vehicleId}`, data);
 
-// ─── Service Categories (admin-only per the collection — no public route) ──
+// ─── Service Categories ──────────────────────────────────────────────────────
 
+// Admin-only per the collection.
 export const getAllServiceCategories = () =>
   apiClient.get('/admin/service_categories');
+
+// Public listing (collection's "03 - Provider" > "Service categories") — this
+// is the one customers hit to populate the issue picker on Request Help.
+export const getServiceCategories = () => apiClient.get('/service_categories');
 
 // ─── Service Requests ────────────────────────────────────────────────────────
 
@@ -135,10 +158,13 @@ export const updateServiceRequest = (
   },
 ) => apiClient.patch(`/service_requests/${requestId}`, data);
 
+export const cancelServiceRequest = (requestId: string) =>
+  updateServiceRequest(requestId, {status: 'cancelled'});
+
 // ─── Provider Status ─────────────────────────────────────────────────────────
 
 export const setProviderType = (data: {
-  provider_type: 'two_driver' | 'workshop';
+  provider_type: 'two_driver' | 'workshop-owner';
 }) => apiClient.patch('/provider/type', data);
 
 export const setProviderOnlineStatus = (data: {
@@ -146,6 +172,27 @@ export const setProviderOnlineStatus = (data: {
   current_lat?: number;
   current_lng?: number;
 }) => apiClient.patch('/provider/online', data);
+
+// ─── Live Location Tracking ──────────────────────────────────────────────────
+// Backend-confirmed contract (not yet added to the Postman collection):
+//   PATCH /provider/location  {latitude, longitude}  (provider session)
+//     -> {provider_profile: {id, current_lat, current_lng, updated_at}}
+//     400 if lat/lng missing, 403 if not a provider, 404 if no provider profile
+//   GET /service_requests/:id/provider_location  (customer session — must own
+//     the request, 403 otherwise) -> {latitude, longitude, updated_at}
+//     404 if no accepted provider yet, or provider hasn't pinged yet
+// Lat/lng come back as either strings or numbers depending on serialization —
+// callers should always parseFloat rather than assume a type. 404s here are
+// an expected "no location yet" state, not an error — treat as such.
+export const pingProviderLocation = (data: {latitude: number; longitude: number}) =>
+  apiClient.patch('/provider/location', data);
+
+export const getRequestProviderLocation = (serviceRequestId: string) =>
+  apiClient.get<{
+    latitude: string | number;
+    longitude: string | number;
+    updated_at: string;
+  }>(`/service_requests/${serviceRequestId}/provider_location`);
 
 // ─── Provider Documents ──────────────────────────────────────────────────────
 
@@ -182,6 +229,59 @@ export const registerTowTruck = (data: {
   plate_number: string;
   capacity_tons: number;
 }) => apiClient.post('/provider/vehicles', data);
+
+// One-time setup for workshop-owner providers — the workshop's location is
+// fixed (it's a physical address, not a moving provider), so unlike
+// provider/location above this is captured once during onboarding and never
+// re-sent.
+export const registerWorkshop = (data: {
+  workshop_name: string;
+  workshop_address: string;
+  workshop_city: string;
+  workshop_lat: number;
+  workshop_lng: number;
+}) => apiClient.patch('/provider/workshop', data);
+
+// ─── Workshop Bookings ────────────────────────────────────────────────────────
+
+export interface ApiWorkshop {
+  id: string;
+  provider_profile_id: string;
+  name: string;
+  phone: string;
+  rating: string;
+  address: string;
+  city: string;
+  latitude: string;
+  longitude: string;
+  distance_km: number;
+}
+
+// Customer-facing "find nearby workshops" — the lat/lng are the customer's
+// current position, not the workshop's.
+export const getWorkshops = (coords: {latitude: number; longitude: number}) =>
+  apiClient.get<{workshops: ApiWorkshop[]}>('/workshops', {
+    params: {latitude: coords.latitude, longitude: coords.longitude},
+  });
+
+export const createWorkshopBooking = (data: {
+  provider_id: string;
+  description: string;
+  scheduled_at: string;
+  customer_latitude: number;
+  customer_longitude: number;
+  customer_address: string;
+}) => apiClient.post('/workshop_bookings', data);
+
+export const getWorkshopBookings = () => apiClient.get('/workshop_bookings');
+
+export const getProviderWorkshopBookings = () =>
+  apiClient.get('/provider/workshop_bookings');
+
+export const updateProviderWorkshopBooking = (
+  bookingId: string,
+  data: {status: 'accepted'} | {status: 'rejected'; rejection_reason: string},
+) => apiClient.patch(`/provider/workshop_bookings/${bookingId}`, data);
 
 // ─── Provider Jobs ────────────────────────────────────────────────────────────
 

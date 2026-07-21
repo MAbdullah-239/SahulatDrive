@@ -128,7 +128,14 @@ const VoiceAssistant: React.FC = () => {
       setLastTimings(result.timings);
 
       setIsSpeaking(true);
-      await audioRecorderPlayer.startPlayer(result.audioPath);
+      // startPlayer's native code only treats the path as a real absolute
+      // path when it's prefixed with file:// (or http(s)://) - otherwise it
+      // silently (mis)treats it as relative to the caches dir and mangles
+      // it, and still resolves the promise as if playback started fine.
+      const playablePath = result.audioPath.startsWith('file://')
+        ? result.audioPath
+        : `file://${result.audioPath}`;
+      await audioRecorderPlayer.startPlayer(playablePath);
       audioRecorderPlayer.addPlayBackListener(meta => {
         if (meta.currentPosition >= meta.duration && meta.duration > 0) {
           audioRecorderPlayer.stopPlayer();
