@@ -22,7 +22,7 @@ import {resetToProviderStack} from '../../../navigation/navigationRef';
 // feel stuck.
 const APPROVED_REDIRECT_DELAY_MS = 1800;
 
-const APPROVAL_POLL_INTERVAL_MS = 8000;
+const APPROVAL_POLL_INTERVAL_MS = 5000;
 
 const STEPS = [
   {
@@ -70,14 +70,12 @@ const ProviderPendingApproval: React.FC = () => {
 
   const [approved, setApproved] = useState(false);
 
-  // status === 'active' on /me is the ONLY authoritative signal, confirmed
-  // against a real response (there is no provider_profile.is_verified,
-  // despite earlier backend guidance). A previous version of this screen
-  // also treated any notification whose title merely contained the word
-  // "verified" as an approval signal — which false-positived on messages
-  // like "not yet verified" or "pending verification" and sent unapproved
-  // providers straight to the dashboard. That fallback is gone; approval is
-  // decided solely by the real status field.
+  // is_verified on /me is the authoritative admin-approval signal. A previous
+  // version of this screen also treated any notification whose title merely
+  // contained the word "verified" as an approval signal — which
+  // false-positived on messages like "not yet verified" or "pending
+  // verification" and sent unapproved providers straight to the dashboard.
+  // That fallback is gone; approval is decided solely by this field.
   useEffect(() => {
     if (approved) return;
     let cancelled = false;
@@ -85,7 +83,7 @@ const ProviderPendingApproval: React.FC = () => {
     const checkApproval = async () => {
       try {
         const {data: meData} = await getCurrentUser();
-        const isVerified = meData.user.status === 'active';
+        const isVerified = Boolean(meData.user.is_verified);
         dispatch(setVerified(isVerified));
         if (isVerified && !cancelled) {
           setApproved(true);

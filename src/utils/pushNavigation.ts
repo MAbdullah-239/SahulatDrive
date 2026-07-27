@@ -10,16 +10,16 @@ import {getCurrentUser} from '../requestHandler/api';
 // for whether it still applies to whoever is logged in on this device right
 // now (a stale/misattributed FCM token, or a fast logout/login switch,
 // could otherwise let an unapproved provider ride someone else's push
-// straight past the approval gate) — so this re-checks the real /me status
-// before ever resetting to ProviderStack, exactly like the poll on
-// ProviderPendingApproval does.
+// straight past the approval gate) — so this re-checks the real /me
+// is_verified field before ever resetting to ProviderStack, exactly like
+// the poll on ProviderPendingApproval does.
 const handleRemoteMessage = async (remoteMessage: {
   data?: {[key: string]: string | object};
 }) => {
   if (remoteMessage.data?.type !== 'provider_approved') return;
   try {
     const {data} = await getCurrentUser();
-    if (data.user.status === 'active') {
+    if (data.user.is_verified) {
       resetToProviderStack();
     }
   } catch {

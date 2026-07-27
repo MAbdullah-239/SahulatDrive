@@ -63,9 +63,13 @@ const ProviderSelectServices: React.FC = () => {
   const canContinue = selected.length > 0 && !submitting;
 
   const handleContinue = async () => {
-    // Towing requires a two-person driver setup, so it takes priority over
-    // a plain workshop type when both are selected.
-    const providerType = needsTowTruck ? 'two_driver' : 'workshop-owner';
+    // A provider can offer both services at once, so both types need to
+    // reach the backend — sending only one silently drops the other and
+    // later steps that check for it (e.g. workshop registration) fail.
+    const providerType: Array<'tow_driver' | 'workshop_owner'> = [
+      ...(needsTowTruck ? ['tow_driver' as const] : []),
+      ...(needsWorkshop ? ['workshop_owner' as const] : []),
+    ];
 
     setSubmitting(true);
     try {

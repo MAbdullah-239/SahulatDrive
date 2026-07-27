@@ -87,11 +87,11 @@ const Login: React.FC<LoginProps> = ({onBack, onSignUp}) => {
       await registerDeviceToken();
 
       if (data.user.role === 'provider') {
-        // status === 'active' is the sole authoritative approval signal
-        // (see ProviderPendingApproval) — a provider logging back in before
-        // admin approval must land back on the waiting screen, not skip
-        // straight to the dashboard just because their role is 'provider'.
-        const isVerified = data.user.status === 'active';
+        // is_verified is the sole authoritative approval signal (see
+        // ProviderPendingApproval) — a provider logging back in before admin
+        // approval must land back on the waiting screen, not skip straight
+        // to the dashboard just because their role is 'provider'.
+        const isVerified = Boolean(data.user.is_verified);
         dispatch(setVerified(isVerified));
         if (isVerified) {
           resetToProviderStack();

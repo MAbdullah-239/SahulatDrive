@@ -50,7 +50,7 @@ const ProviderProfile: React.FC = () => {
             role: data.user.role as 'customer' | 'provider',
           }),
         );
-        dispatch(setVerified(data.user.status === 'active'));
+        dispatch(setVerified(Boolean(data.user.is_verified)));
       })
       .catch(() => {
         // Keep showing whatever's already in Redux from cold start.

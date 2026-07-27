@@ -162,7 +162,7 @@ const ProviderHome: React.FC = () => {
             role: data.user.role as 'customer' | 'provider',
           }),
         );
-        dispatch(setVerified(data.user.status === 'active'));
+        dispatch(setVerified(Boolean(data.user.is_verified)));
       })
       .catch(() => {});
   }, [dispatch]);
@@ -226,14 +226,39 @@ const ProviderHome: React.FC = () => {
   ];
 
   const recentJobs = [
-    {id: 1, type: 'Towing', customer: 'Ahmad Ali', time: '2:30 PM', amount: 'PKR 2,000', status: 'Completed'},
-    {id: 2, type: 'Battery Jump', customer: 'Sara Khan', time: '11:00 AM', amount: 'PKR 800', status: 'Completed'},
-    {id: 3, type: 'Fuel Delivery', customer: 'Usman Raza', time: '9:15 AM', amount: 'PKR 500', status: 'Cancelled'},
+    {
+      id: 1,
+      type: 'Towing',
+      customer: 'Ahmad Ali',
+      time: '2:30 PM',
+      amount: 'PKR 2,000',
+      status: 'Completed',
+    },
+    {
+      id: 2,
+      type: 'Battery Jump',
+      customer: 'Sara Khan',
+      time: '11:00 AM',
+      amount: 'PKR 800',
+      status: 'Completed',
+    },
+    {
+      id: 3,
+      type: 'Fuel Delivery',
+      customer: 'Usman Raza',
+      time: '9:15 AM',
+      amount: 'PKR 500',
+      status: 'Cancelled',
+    },
   ];
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor="transparent"
+        translucent
+      />
 
       {/* ── Background Map ── */}
       <MapView
@@ -249,12 +274,13 @@ const ProviderHome: React.FC = () => {
         }}
         customMapStyle={mapDarkStyle}>
         <Marker coordinate={coords ?? DEFAULT_COORDS}>
-          <View style={[styles.providerDot, isOnline && styles.providerDotOnline]} />
+          <View
+            style={[styles.providerDot, isOnline && styles.providerDotOnline]}
+          />
         </Marker>
       </MapView>
 
       <SafeAreaView style={styles.safeArea} pointerEvents="box-none">
-
         {/* ── Header ── */}
         <View style={styles.topContainer} pointerEvents="box-none">
           <View style={styles.header}>
@@ -295,7 +321,9 @@ const ProviderHome: React.FC = () => {
                     : placeName
                     ? placeName
                     : coords
-                    ? `${coords.latitude.toFixed(4)}° N, ${coords.longitude.toFixed(4)}° E`
+                    ? `${coords.latitude.toFixed(
+                        4,
+                      )}° N, ${coords.longitude.toFixed(4)}° E`
                     : 'Location unavailable'}
                 </Text>
               </View>
@@ -312,11 +340,13 @@ const ProviderHome: React.FC = () => {
           contentContainerStyle={styles.bottomContent}
           showsVerticalScrollIndicator={false}
           pointerEvents="box-none">
-
           {/* ── Online Toggle Card ── */}
-          <View style={[styles.toggleCard, isOnline && styles.toggleCardOnline]}>
+          <View
+            style={[styles.toggleCard, isOnline && styles.toggleCardOnline]}>
             <View style={styles.toggleLeft}>
-              <View style={[styles.toggleDot, isOnline && styles.toggleDotOn]} />
+              <View
+                style={[styles.toggleDot, isOnline && styles.toggleDotOn]}
+              />
               <View>
                 <Text style={styles.toggleTitle}>
                   {isOnline ? 'You are Online' : 'Go Online to Accept Jobs'}
@@ -349,7 +379,10 @@ const ProviderHome: React.FC = () => {
               onPress={async () => {
                 const pending = await checkForJobs();
                 if (!pending) {
-                  Alert.alert('No Jobs Yet', 'No pending job requests right now.');
+                  Alert.alert(
+                    'No Jobs Yet',
+                    'No pending job requests right now.',
+                  );
                 }
               }}>
               <Zap size={18} color="#FFFFFF" strokeWidth={2.5} />
@@ -373,7 +406,12 @@ const ProviderHome: React.FC = () => {
             <View style={styles.statDivider} />
             <View style={styles.statCard}>
               <View style={styles.ratingRow}>
-                <Star size={14} color="#F59E0B" fill="#F59E0B" strokeWidth={1.5} />
+                <Star
+                  size={14}
+                  color="#F59E0B"
+                  fill="#F59E0B"
+                  strokeWidth={1.5}
+                />
                 <Text style={styles.statValue}>{rating}</Text>
               </View>
               <Text style={styles.statLabel}>Rating</Text>
@@ -417,7 +455,9 @@ const ProviderHome: React.FC = () => {
               </View>
               <View style={styles.jobInfo}>
                 <Text style={styles.jobType}>{job.type}</Text>
-                <Text style={styles.jobMeta}>{job.customer} · {job.time}</Text>
+                <Text style={styles.jobMeta}>
+                  {job.customer} · {job.time}
+                </Text>
               </View>
               <View style={styles.jobRight}>
                 <Text style={styles.jobAmount}>{job.amount}</Text>
@@ -434,7 +474,10 @@ const ProviderHome: React.FC = () => {
                   <Text
                     style={[
                       styles.jobStatusText,
-                      {color: job.status === 'Completed' ? '#10B981' : '#EA4335'},
+                      {
+                        color:
+                          job.status === 'Completed' ? '#10B981' : '#EA4335',
+                      },
                     ]}>
                     {job.status}
                   </Text>
@@ -605,7 +648,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   statCard: {flex: 1, alignItems: 'center'},
-  statDivider: {width: 1, height: 32, backgroundColor: 'rgba(255,255,255,0.07)'},
+  statDivider: {
+    width: 1,
+    height: 32,
+    backgroundColor: 'rgba(255,255,255,0.07)',
+  },
   ratingRow: {flexDirection: 'row', alignItems: 'center', gap: 4},
   statValue: {
     fontFamily: FontFamily.UrbanistBold,

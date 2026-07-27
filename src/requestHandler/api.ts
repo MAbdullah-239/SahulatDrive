@@ -56,9 +56,6 @@ export const forgotPassword = (data: {login: string}) =>
 export const resetPassword = (data: {otp_code: string; new_password: string}) =>
   apiClient.post<{message: string}>('/auth/reset_password', data);
 
-// Confirmed against a real GET /me response for a provider — there is no
-// provider_profile.is_verified field (despite earlier backend guidance);
-// approval is reflected as status: "active" at the top level instead.
 export interface ApiUser {
   id: string;
   name: string;
@@ -67,6 +64,7 @@ export interface ApiUser {
   role: 'customer' | 'provider' | 'admin';
   status?: string;
   provider_type?: string | null;
+  is_verified?: boolean;
   otp_verified?: boolean;
 }
 
@@ -164,7 +162,7 @@ export const cancelServiceRequest = (requestId: string) =>
 // ─── Provider Status ─────────────────────────────────────────────────────────
 
 export const setProviderType = (data: {
-  provider_type: 'two_driver' | 'workshop-owner';
+  provider_type: Array<'tow_driver' | 'workshop_owner'>;
 }) => apiClient.patch('/provider/type', data);
 
 export const setProviderOnlineStatus = (data: {
@@ -230,7 +228,7 @@ export const registerTowTruck = (data: {
   capacity_tons: number;
 }) => apiClient.post('/provider/vehicles', data);
 
-// One-time setup for workshop-owner providers — the workshop's location is
+// One-time setup for workshop_owner providers — the workshop's location is
 // fixed (it's a physical address, not a moving provider), so unlike
 // provider/location above this is captured once during onboarding and never
 // re-sent.

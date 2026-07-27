@@ -113,8 +113,6 @@ const Home: React.FC = () => {
         backgroundColor="transparent"
         translucent
       />
-
-      {/* ── Background Map ── */}
       <MapView
         ref={mapRef}
         provider={PROVIDER_GOOGLE}

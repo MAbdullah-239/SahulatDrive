@@ -133,8 +133,8 @@ const ProviderAddWorkshop: React.FC = () => {
           <Text style={styles.stepLabel}>Step 2 of 3 — Workshop Only</Text>
           <Text style={styles.title}>Set Up Your{'\n'}Workshop</Text>
           <Text style={styles.subtitle}>
-            Tell us about your workshop. Its location is captured once here
-            and won't need to be updated again.
+            Tell us about your workshop. Its location is captured once here and
+            won't need to be updated again.
           </Text>
         </View>
 
@@ -143,8 +143,8 @@ const ProviderAddWorkshop: React.FC = () => {
           <Text style={styles.noteIcon}>🔧</Text>
           <Text style={styles.noteText}>
             Only providers offering{' '}
-            <Text style={styles.orange}>workshop / mechanic</Text> services
-            need to set up a workshop location.
+            <Text style={styles.orange}>workshop / mechanic</Text> services need
+            to set up a workshop location.
           </Text>
         </View>
 
@@ -200,7 +200,9 @@ const ProviderAddWorkshop: React.FC = () => {
             <View style={{flex: 1}}>
               <Text style={styles.locationTitle}>Workshop Location</Text>
               {locating ? (
-                <Text style={styles.locationSubtitle}>Capturing GPS location…</Text>
+                <Text style={styles.locationSubtitle}>
+                  Capturing GPS location…
+                </Text>
               ) : coords ? (
                 <Text style={styles.locationSubtitle}>
                   Captured — {coords.latitude.toFixed(5)},{' '}

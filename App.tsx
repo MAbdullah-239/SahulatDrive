@@ -12,10 +12,9 @@ import {registerDeviceToken} from './src/utils/registerDeviceToken';
 import {navigationRef, resetToProviderStack} from './src/navigation/navigationRef';
 import {setUpPushNavigation} from './src/utils/pushNavigation';
 
-// Shared by cold start and every app-resume refresh — status === 'active' on
-// /me is the authoritative approval signal, confirmed against a real
-// response (there is no provider_profile.is_verified, despite earlier
-// backend guidance). The FCM push is just the fast path, not guaranteed.
+// Shared by cold start and every app-resume refresh — is_verified on /me is
+// the authoritative approval signal. The FCM push is just the fast path,
+// not guaranteed.
 const refreshCurrentUser = async () => {
   const {data} = await getCurrentUser();
   store.dispatch(
@@ -29,7 +28,7 @@ const refreshCurrentUser = async () => {
   );
 
   const wasVerified = store.getState().provider.isVerified;
-  const isVerified = data.user.status === 'active';
+  const isVerified = Boolean(data.user.is_verified);
   store.dispatch(setVerified(isVerified));
   if (data.user.role === 'provider' && isVerified && !wasVerified) {
     resetToProviderStack();
